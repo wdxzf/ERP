@@ -1,0 +1,13 @@
+services:
+  erp:
+    build: .
+    container_name: dalang-erp
+    restart: unless-stopped
+    ports:
+      - "${ERP_PORT:-8000}:8000"
+    environment:
+      BOM_DELETE_PASSWORD: "${BOM_DELETE_PASSWORD:-649238}"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+
