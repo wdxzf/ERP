@@ -50,6 +50,31 @@ function paymentBadgeHtml(paymentStatus) {
   return `<span class="po-status-tag ${m.cls}">${t}</span>`;
 }
 
+function orderListMetaHtml(r) {
+  const supplier = r.supplier_company ? `<div class="po-order-subline">${escAttr(r.supplier_company)}</div>` : "";
+  return `<div class="po-order-main">${escAttr(r.order_no)}</div><div class="po-order-subline">${isoDateOnly(
+    r.order_date
+  )}</div>${supplier}`;
+}
+
+function orderStatusSummaryHtml(r, due) {
+  let dueText = "";
+  if (r.payment_due_date) {
+    const dateText = escAttr(String(r.payment_due_date).slice(0, 10));
+    const remaining = Number(r.payment_due_days_remaining);
+    if (r.payment_status === "paid") dueText = "已付款";
+    else if (Number.isFinite(remaining)) {
+      if (remaining < 0) dueText = `超期 ${Math.abs(remaining)} 天`;
+      else if (remaining === 0) dueText = "今日到期";
+      else dueText = `剩余 ${remaining} 天`;
+    }
+    if (dueText) {
+      dueText = `<div class="po-order-subline">截止 ${dateText} · ${dueText}</div>`;
+    }
+  }
+  return `<div class="po-status-stack">${statusBadgeHtml(r.status)}${paymentBadgeHtml(r.payment_status)}${dueText}</div>`;
+}
+
 /** 付款截止日、剩余天数两列（未维护供应商账期则无截止日） */
 function paymentDueDateTds(r) {
   if (!r.payment_due_date) {
@@ -370,15 +395,15 @@ async function loadList() {
       (r) => {
         const due = paymentDueDateTds(r);
         return `<tr>
-    <td>${escAttr(r.order_no)}</td>
+    <td>${orderListMetaHtml(r)}</td>
     <td>${isoDateOnly(r.order_date)}</td>
     <td>${escAttr(r.supplier_company || "")}</td>
-    <td>${statusBadgeHtml(r.status)}</td>
+    <td>${orderStatusSummaryHtml(r, due)}</td>
     <td>${paymentBadgeHtml(r.payment_status)}</td>
     ${due.d}
     ${due.rem}
-    <td>${fmt2(r.total_with_tax)}</td>
-    <td>
+    <td><div class="po-amount-cell">¥ ${fmt2(r.total_with_tax)}</div></td>
+    <td class="po-list-actions">
       <button type="button" class="btn sm" data-edit="${r.id}">编辑</button>
       <button type="button" class="btn sm" data-quick-status="${r.id}" data-order-no="${escAttr(r.order_no)}" data-current-status="${escAttr(r.status)}" data-current-payment="${escAttr(r.payment_status || "unpaid")}">修改状态</button>
       <a class="btn sm" href="/purchase-orders/${r.id}/pdf" target="_blank">导出PDF</a>

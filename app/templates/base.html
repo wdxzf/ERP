@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="layout">
-    <aside class="sidebar">
+    <aside class="sidebar" id="app-sidebar">
       <div class="sidebar-header">
         <a href="/ui" class="sidebar-brand" title="ERP_W">
           <span class="sidebar-brand-text menu-text">ERP_W</span>
@@ -176,10 +176,25 @@
         </a>
       </nav>
     </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
     <main class="content">
       <header class="page-header">
-        <h1>{{ page_title }}</h1>
-        <p>{{ page_subtitle or "管理电阻、电容、芯片、电机、钢材等所有物料" }}</p>
+        <div class="page-header-top">
+          <button
+            type="button"
+            class="mobile-nav-toggle"
+            id="mobile-nav-toggle"
+            aria-label="打开导航菜单"
+            aria-controls="app-sidebar"
+            aria-expanded="false"
+          >
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="page-header-copy">
+            <h1>{{ page_title }}</h1>
+            <p>{{ page_subtitle or "管理电阻、电容、芯片、电机、钢材等所有物料" }}</p>
+          </div>
+        </div>
       </header>
       <section>
         {% block content %}{% endblock %}

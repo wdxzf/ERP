@@ -259,6 +259,15 @@ function renderRemarkCell(material) {
   return `<div class="remark-cell">${escapeHtml(remark)}</div>`;
 }
 
+function renderMaterialMetaSummary(material) {
+  const parts = [
+    material.category ? `分类：${material.category}` : "",
+    material.package_name ? `封装：${material.package_name}` : "",
+    material.storage_location ? `库位：${material.storage_location}` : "",
+  ].filter(Boolean);
+  return parts.length ? `<div class="material-subline material-mobile-meta">${escapeHtml(parts.join(" / "))}</div>` : "";
+}
+
 function materialRowUnchanged(material, payload, spec, drawingNo) {
   return (
     normStr(payload.name) === normStr(material.name) &&
@@ -292,6 +301,7 @@ function renderTable() {
           <td>
             <div class="material-name-cell">${escapeHtml(material.name || "")}</div>
             <div class="material-subline">${escapeHtml(material.code || "")}</div>
+            ${renderMaterialMetaSummary(material)}
           </td>
           <td>
             <div class="material-model-cell">${escapeHtml(formatModel(material) || "未填写")}</div>
