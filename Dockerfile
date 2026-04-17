@@ -11,9 +11,7 @@ RUN mkdir -p /app/data /app/uploads/purchase_invoices /app/uploads/revision_draw
 
 COPY app ./app
 COPY scripts ./scripts
-COPY README.md README_EN.md LICENSE DISCLAIMER.md ./
 COPY image ./image
-COPY .env.example ./
 
 EXPOSE 8000
 

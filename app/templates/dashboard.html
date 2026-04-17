@@ -1,23 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="grid-cards" id="stats-cards">
-  <div class="card"><h3>物料总数</h3><p id="s_total_materials">-</p></div>
-  <div class="card"><h3>标准件</h3><p id="s_standard_count">-</p></div>
-  <div class="card"><h3>自制件</h3><p id="s_custom_count">-</p></div>
-  <div class="card"><h3>装配件</h3><p id="s_assembly_count">-</p></div>
-  <div class="card"><h3>当前生效BOM数</h3><p id="s_current_bom_count">-</p></div>
-  <div class="card"><h3>低库存物料数</h3><p id="s_low_stock_count">-</p></div>
-  <div class="card"><h3>当前生效版本数</h3><p id="s_current_revision_count">-</p></div>
+<section class="hero-panel dashboard-hero">
+  <div>
+    <p class="hero-eyebrow">PERSONAL ELECTRONICS LAB</p>
+    <h2>把常用元件、板卡和项目资料放到一个更顺手的工作台里。</h2>
+    <p class="hero-copy">这页不再强调工厂产线指标，而是让你快速看清库存、低库存提醒和正在维护的项目结构。</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn primary" href="/ui/materials">打开元件库</a>
+    <a class="btn" href="/ui/boms">查看项目 BOM</a>
+    <a class="btn" href="/ui/inventory">库存流水</a>
+  </div>
+</section>
+
+<div class="stats-grid" id="stats-cards">
+  <div class="card stat-card"><span class="stat-eyebrow">PARTS</span><h3>元件总数</h3><p id="s_total_materials">-</p></div>
+  <div class="card stat-card"><span class="stat-eyebrow">READY-TO-USE</span><h3>通用器件</h3><p id="s_standard_count">-</p></div>
+  <div class="card stat-card"><span class="stat-eyebrow">DIY</span><h3>自制板卡</h3><p id="s_custom_count">-</p></div>
+  <div class="card stat-card"><span class="stat-eyebrow">MODULE</span><h3>模块 / 整机</h3><p id="s_assembly_count">-</p></div>
+  <div class="card stat-card"><span class="stat-eyebrow">PROJECT</span><h3>当前项目 BOM</h3><p id="s_current_bom_count">-</p></div>
+  <div class="card stat-card warning"><span class="stat-eyebrow">ALERT</span><h3>低库存提醒</h3><p id="s_low_stock_count">-</p></div>
+  <div class="card stat-card"><span class="stat-eyebrow">REVISION</span><h3>当前版本记录</h3><p id="s_current_revision_count">-</p></div>
 </div>
 
-<div class="card">
-  <h3>快捷入口</h3>
+<div class="card quick-links-card">
+  <h3>常用入口</h3>
   <div class="btn-row">
-    <a class="btn" href="/export/dashboard">导出 Excel（仪表盘指标）</a>
-    <a class="btn primary" href="/ui/materials">新增/管理物料</a>
-    <a class="btn" href="/ui/boms">查看 BOM</a>
-    <a class="btn" href="/ui/inventory">库存流水</a>
-    <a class="btn" href="/ui/procurement">缺料计算</a>
+    <a class="btn primary" href="/ui/materials">新增 / 管理元件</a>
+    <a class="btn" href="/ui/categories">编辑分类与常用选项</a>
+    <a class="btn" href="/ui/procurement">查看补货建议</a>
+    <a class="btn" href="/export/dashboard">导出当前指标</a>
   </div>
 </div>
 

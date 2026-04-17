@@ -9,6 +9,7 @@ from app.database import (
     engine,
     ensure_company_profile,
     ensure_company_profile_columns,
+    ensure_default_material_categories,
     ensure_default_system_options,
     ensure_purchase_order_extensions,
     ensure_sqlite_app_integration_woocommerce_columns,
@@ -45,6 +46,7 @@ Base.metadata.create_all(bind=engine)
 ensure_sqlite_material_columns()
 ensure_sqlite_supplier_columns()
 ensure_default_system_options()
+ensure_default_material_categories()
 ensure_company_profile()
 ensure_company_profile_columns()
 migrate_inquiry_lines_material_ref_only()
@@ -60,12 +62,13 @@ finally:
     _db_boot.close()
 
 app = FastAPI(
-    title="大亮ERP / Inventory API",
+    title="ERP_W / Inventory API",
     version="0.1.0",
     description="机械产品物料、BOM、版本、库存、采购建议 MVP",
 )
 
 app.include_router(materials.router)
+app.include_router(materials.router, prefix="/api/v1")
 app.include_router(material_categories.router)
 app.include_router(system_options.router)
 app.include_router(revisions.router)
@@ -89,4 +92,18 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/")
 def root():
+    return RedirectResponse(url="/inventory")
+
+
+@app.get("/inventory")
+@app.get("/inventory/")
+def inventory_entry():
     return RedirectResponse(url="/ui")
+
+
+@app.get("/pcba")
+@app.get("/pcba/")
+@app.get("/designs")
+@app.get("/designs/")
+def pcba_entry():
+    return RedirectResponse(url="/ui/self-products")

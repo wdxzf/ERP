@@ -102,12 +102,12 @@ function onTypeChanged() {
   document.getElementById("th-prefix").style.display = showPrefix ? "" : "none";
   const t = typeSelect().value;
   const hintMap = {
-    category: "物料分类",
+    category: "元件分类",
     unit: "单位",
     tax_rate: "税率",
-    material_attr: "材质",
-    grade: "等级",
-    product_category: "产品类别",
+    material_attr: "品牌 / 系列",
+    grade: "等级 / 属性",
+    product_category: "产品分类",
   };
   const nm = document.getElementById("c_name");
   if (nm) nm.placeholder = `按${hintMap[t] || "名称"}搜索`;

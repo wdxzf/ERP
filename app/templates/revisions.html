@@ -3,7 +3,7 @@
 <input type="hidden" id="focus_material_id" value="{{ focus_material_id or '' }}">
 
 <div class="card">
-  <p class="muted-hint">仅列出<strong>自制件、装配件</strong>的版本记录（标准件一般不维护版本）。同一物料仅一个「当前版本」。可从物料表「版本」链接跳入并自动限定该物料。</p>
+  <p class="muted-hint">这里只列出<strong>自制板卡 / 模块</strong>的版本记录（通用器件通常不维护版本）。同一物料仅一个「当前版本」。可从元件库里的「版本」链接直接跳入并自动限定该物料。</p>
   <div class="filters">
     <input type="text" id="rev_f_code" placeholder="物料编码">
     <input type="text" id="rev_f_name" placeholder="物料名称">
@@ -46,7 +46,7 @@
     <form id="rev-form" class="form-grid">
       <input type="hidden" id="r_id">
       <div id="r_material_row" class="full">
-        <label>所属物料（非标）
+        <label>所属物料（自制 / 模块）
           <select id="r_material_id" required></select>
         </label>
       </div>

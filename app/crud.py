@@ -194,6 +194,41 @@ def hard_delete_system_option(db: Session, option_id: int):
 # -------------------------
 # Materials
 # -------------------------
+MATERIAL_TYPE_TO_PART_TYPE = {
+    "板卡": models.PartType.custom,
+    "模块": models.PartType.assembly,
+    "整机": models.PartType.assembly,
+}
+
+
+def _normalize_material_type(value: str | None) -> str | None:
+    text = (value or "").strip()
+    return text or None
+
+
+def _default_material_type_from_part_type(part_type: models.PartType | str | None) -> str:
+    raw = part_type.value if hasattr(part_type, "value") else str(part_type or "")
+    if raw == models.PartType.custom.value:
+        return "板卡"
+    if raw == models.PartType.assembly.value:
+        return "模块"
+    return "电子元器件"
+
+
+def _apply_material_type_defaults(data: dict):
+    has_material_type = "material_type" in data
+    has_part_type = "part_type" in data
+    if has_material_type:
+        data["material_type"] = _normalize_material_type(data.get("material_type"))
+    if data.get("material_type"):
+        mapped = MATERIAL_TYPE_TO_PART_TYPE.get(data["material_type"])
+        if not has_part_type:
+            data["part_type"] = mapped or models.PartType.standard
+        return
+    if has_part_type and data.get("part_type"):
+        data["material_type"] = _default_material_type_from_part_type(data["part_type"])
+
+
 def list_materials(db: Session):
     return db.scalars(select(models.Material).order_by(models.Material.id.desc())).all()
 
@@ -207,6 +242,7 @@ def get_material(db: Session, material_id: int):
 
 def create_material(db: Session, payload: schemas.MaterialCreate):
     data = payload.model_dump()
+    _apply_material_type_defaults(data)
     category = data.get("category")
     if category:
         exists_category = db.scalar(
@@ -232,6 +268,7 @@ def create_material(db: Session, payload: schemas.MaterialCreate):
 def update_material(db: Session, material_id: int, payload: schemas.MaterialUpdate):
     material = get_material(db, material_id)
     data = payload.model_dump(exclude_unset=True)
+    _apply_material_type_defaults(data)
     if "category" in data and data["category"]:
         exists_category = db.scalar(
             select(models.MaterialCategory).where(

@@ -10,6 +10,9 @@ class MaterialBase(BaseModel):
     code: str | None = None
     name: str
     spec: str | None = None
+    material_type: str | None = None
+    package_name: str | None = None
+    storage_location: str | None = None
     unit: str | None = None
     category: str | None = None
     part_type: PartType = PartType.standard
@@ -37,6 +40,9 @@ class MaterialCreate(MaterialBase):
 class MaterialUpdate(BaseModel):
     name: str | None = None
     spec: str | None = None
+    material_type: str | None = None
+    package_name: str | None = None
+    storage_location: str | None = None
     unit: str | None = None
     category: str | None = None
     part_type: PartType | None = None

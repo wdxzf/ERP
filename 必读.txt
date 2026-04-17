@@ -1,4 +1,4 @@
-# 大亮ERP（源码公开 · 自用许可）
+# ERP_W（源码公开 · 自用许可）
 
 [English README](README_EN.md)
 
@@ -148,7 +148,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 1. 按 README 前面步骤 **先建好 `.venv` 并 `pip install -r requirements.txt`**，并确认能手动启动成功。
 2. 项目里已提供 **`scripts\start_server.bat`**：会在项目根目录激活虚拟环境并执行 `uvicorn`（**未加 `--reload`**，更适合长期后台跑；改代码后需自行重启该任务或进程）。
 3. 打开 **任务计划程序**（开始菜单搜索「任务计划程序」或 `taskschd.msc`）→ **创建任务**（或「创建基本任务」）：
-   - **名称**：例如 `大亮ERP`。
+   - **名称**：例如 `ERP_W`。
    - **触发器**：建议选 **用户登录时**（当前 Windows 用户下一定能找到 `.venv` 与 Python）。若选「计算机启动时」，有时以系统账户运行会找不到用户目录里的 Python，需自行改「运行身份」为登录用户。
    - **操作** → **启动程序**：
      - **程序或脚本**：浏览到本仓库的 `scripts\start_server.bat`（完整路径，如 `D:\erp-opensource\scripts\start_server.bat`）。

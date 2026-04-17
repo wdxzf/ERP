@@ -136,56 +136,42 @@ def export_materials(view: str = Query(default="all", pattern="^(all|standard|no
     headers = [
         "编码",
         "名称",
-        "当前版本",
-        "规格/图号",
-        "单位",
+        "型号/参数",
+        "物料类型",
         "分类",
-        "类型",
-        "用途",
-        "材质",
-        "等级",
-        "默认供应商",
-        "采购链接",
-        "编辑状态",
-        "启用状态",
+        "封装",
+        "库位",
+        "单位",
         "当前库存",
         "安全库存",
         "单价",
-        "税率",
+        "默认供应商",
         "备注",
     ]
     ws.append(headers)
     for c in range(1, len(headers) + 1):
         ws.cell(1, c).font = Font(bold=True)
     for m in materials:
-        pt = m.part_type.value if hasattr(m.part_type, "value") else str(m.part_type)
-        st = m.status.value if hasattr(m.status, "value") else str(m.status)
         spec_draw = " / ".join(x for x in [(m.spec or "").strip(), (m.drawing_no or "").strip()] if x)
         ws.append(
             [
                 m.code,
                 m.name,
-                m.current_revision or "",
                 spec_draw,
-                m.unit or "",
+                m.material_type or "",
                 m.category or "",
-                PART_TYPE_CN.get(pt, pt),
-                m.usage or "",
-                m.material_name_attr or "",
-                m.grade_attr or "",
-                m.default_supplier or "",
-                m.purchase_link or "",
-                STATUS_CN.get(st, st),
-                "启用" if m.is_active else "停用",
+                m.package_name or "",
+                m.storage_location or "",
+                m.unit or "",
                 _q3(m.current_stock),
                 _q3(m.safety_stock),
                 _q3(m.unit_price),
-                m.tax_rate or "",
+                m.default_supplier or "",
                 (m.remark or "")[:5000],
             ]
         )
     if ws.max_row >= 2:
-        _apply_decimal3_range(ws, 2, ws.max_row, (15, 16, 17))
+        _apply_decimal3_range(ws, 2, ws.max_row, (8, 9, 10))
     name = f"物料_{view}.xlsx"
     return _wb_response(wb, f"materials_{view}.xlsx", name)
 

@@ -1,5 +1,6 @@
 # 运行时 SQLite 数据库（勿将含真实业务数据的库提交到公开仓库）
 data/*.db
+data/*.db.*
 data/*.sqlite3
 
 # 用户上传文件（采购发票附件等）
@@ -16,6 +17,7 @@ __pycache__/
 dist/
 build/
 .venv/
+.venv.py*-backup-*/
 venv/
 # 常见本地虚拟环境目录名
 erp/

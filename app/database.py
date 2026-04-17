@@ -36,6 +36,9 @@ def ensure_sqlite_material_columns():
         "grade_attr": "VARCHAR(64)",
         "purchase_link": "VARCHAR(500)",
         "tax_rate": "VARCHAR(32)",
+        "material_type": "VARCHAR(64)",
+        "package_name": "VARCHAR(64)",
+        "storage_location": "VARCHAR(64)",
     }
     with engine.begin() as conn:
         rows = conn.execute(text("PRAGMA table_info(materials)")).fetchall()
@@ -43,6 +46,19 @@ def ensure_sqlite_material_columns():
         for col, col_type in expected_columns.items():
             if col not in existing:
                 conn.execute(text(f'ALTER TABLE "materials" ADD COLUMN "{col}" {col_type}'))
+        conn.execute(
+            text(
+                """
+                UPDATE materials
+                SET material_type = CASE
+                    WHEN material_type IS NOT NULL AND TRIM(material_type) != '' THEN material_type
+                    WHEN part_type = 'custom' THEN '板卡'
+                    WHEN part_type = 'assembly' THEN '模块'
+                    ELSE '电子元器件'
+                END
+                """
+            )
+        )
 
 
 def ensure_sqlite_supplier_columns():
@@ -253,20 +269,22 @@ def ensure_sqlite_sales_order_lines_product_id():
 
 def ensure_default_system_options():
     defaults = {
-        "unit": ["只", "个", "套", "米", "公斤", "罐", "桶"],
+        "unit": ["只", "个", "盘", "卷", "套", "米"],
         "tax_rate": ["13%专票", "3%普票", "未税", "1%普票", "3%专票", "9%专票"],
-        "material_attr": ["塑料", "45#钢", "Q235", "铝合金", "201不锈钢", "304不锈钢", "其他钢材", "其他混合"],
-        "grade": ["4.8级", "8.8级", "10.9级", "12.8级"],
+        "material_attr": ["TI", "ADI", "ST", "Infineon", "onsemi", "NXP", "Murata", "Yageo"],
+        "grade": ["常规", "精密", "工业级", "车规级", "实验用"],
     }
     with engine.begin() as conn:
         for option_type, names in defaults.items():
-            count = conn.execute(
-                text('SELECT COUNT(1) FROM "system_options" WHERE option_type=:option_type'),
-                {"option_type": option_type},
-            ).scalar()
-            if count and int(count) > 0:
-                continue
             for idx, name in enumerate(names, start=1):
+                exists = conn.execute(
+                    text(
+                        'SELECT COUNT(1) FROM "system_options" WHERE option_type=:option_type AND name=:name'
+                    ),
+                    {"option_type": option_type, "name": name},
+                ).scalar()
+                if exists and int(exists) > 0:
+                    continue
                 conn.execute(
                     text(
                         'INSERT INTO "system_options" (option_type, name, sort_order, is_active, created_at, updated_at) '
@@ -274,3 +292,40 @@ def ensure_default_system_options():
                     ),
                     {"option_type": option_type, "name": name, "sort_order": idx * 10},
                 )
+
+
+def ensure_default_material_categories():
+    defaults = [
+        ("电阻", "RES"),
+        ("电容", "CAP"),
+        ("IC", "IC"),
+        ("连接器", "CONN"),
+        ("模块", "MOD"),
+        ("板卡", "PCB"),
+        ("电机", "MOT"),
+        ("钢材", "MET"),
+        ("螺丝", "SCR"),
+        ("五金件", "HW"),
+        ("传感器", "SEN"),
+        ("机加工件", "MC"),
+        ("电源芯片", "PMIC"),
+        ("MCU", "MCU"),
+    ]
+    with engine.begin() as conn:
+        count = conn.execute(text('SELECT COUNT(1) FROM "material_categories"')).scalar()
+        if count and int(count) > 0:
+            return
+        for idx, (name, prefix) in enumerate(defaults, start=1):
+            conn.execute(
+                text(
+                    'INSERT INTO "material_categories" '
+                    '(name, code_prefix, sort_order, is_active, remark, created_at, updated_at) '
+                    "VALUES (:name, :code_prefix, :sort_order, 1, :remark, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {
+                    "name": name,
+                    "code_prefix": prefix,
+                    "sort_order": idx * 10,
+                    "remark": "默认电子元器件分类",
+                },
+            )

@@ -1,36 +1,62 @@
 {% extends "base.html" %}
 {% block content %}
 <input type="hidden" id="view_mode" value="{{ view_mode or 'all' }}">
-<div class="card">
-  <div class="filters">
-    <input id="f_code" placeholder="按物料编码搜索">
-    <input id="f_name" placeholder="按名称搜索">
-    <select id="f_category"></select>
-    <select id="f_part_type">
-      <option value="">全部类型</option>
-      <option value="standard">标准件</option>
-      <option value="custom">自制件</option>
-      <option value="assembly">装配件</option>
-    </select>
-    <select id="f_status">
-      <option value="">全部编辑状态</option>
-      <option value="draft">草稿</option>
-      <option value="released">已发布</option>
-    </select>
-    <button class="btn primary" onclick="openMaterialModal()">新增物料</button>
-    <a class="btn" href="/export/materials?view={{ view_mode or 'all' }}">导出 Excel</a>
-    <input type="file" id="material-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden">
-    <button type="button" class="btn" id="material-import-btn">导入 Excel</button>
-    <a class="btn" href="/import/materials/template">下载导入模板</a>
+
+<section class="card tool-panel material-library-panel">
+  <div class="tool-panel-top material-library-top">
+    <div class="tool-panel-actions">
+      <button class="btn primary action-btn" onclick="openMaterialModal()">新增物料</button>
+      <button type="button" class="btn action-btn" id="material-import-open-btn">导入 Excel</button>
+      <a class="btn action-btn" href="/import/materials/template">下载模板</a>
+      <a class="btn action-btn" href="/export/materials?view={{ view_mode or 'all' }}">导出 Excel</a>
+      <a class="btn action-btn" href="/ui/categories">分类管理</a>
+    </div>
   </div>
-</div>
+
+  <div class="summary-inline">
+    <div class="summary-chip">
+      <span class="summary-chip-label">物料总数</span>
+      <strong class="summary-chip-value" id="m_total_count">0</strong>
+    </div>
+    <div class="summary-chip summary-chip-alert">
+      <span class="summary-chip-label">低库存数量</span>
+      <strong class="summary-chip-value" id="m_low_stock_count">0</strong>
+    </div>
+    <div class="summary-chip">
+      <span class="summary-chip-label">分类数量</span>
+      <strong class="summary-chip-value" id="m_category_count">0</strong>
+    </div>
+    <div class="summary-chip">
+      <span class="summary-chip-label">库位数量</span>
+      <strong class="summary-chip-value" id="m_location_count">0</strong>
+    </div>
+  </div>
+
+  <div class="filters inventory-filters inventory-filters-main material-library-filters">
+    <input id="f_keyword" placeholder="搜索 名称 / 型号 / 参数" autocomplete="off">
+    <select id="f_material_type"></select>
+    <select id="f_category"></select>
+    <select id="f_package"></select>
+    <select id="f_location"></select>
+    <label class="toggle-pill">
+      <input id="f_low_stock_only" type="checkbox">
+      <span>仅看低库存</span>
+    </label>
+    <button type="button" class="btn" id="material-clear-filters">清空筛选</button>
+  </div>
+</section>
 
 <div id="msg" class="msg"></div>
 
-<div class="card materials-table-card">
-  <div class="card-title-row materials-batch-bar">
+<div class="card materials-table-card inventory-table-card">
+  <div class="card-title-row materials-batch-bar inventory-table-toolbar">
+    <div class="table-toolbar-left">
+      <strong>物料列表</strong>
+      <span class="muted-mini">表格优先，尽量让查找、维护和补库存都在这一屏完成</span>
+    </div>
     <div class="filters" style="margin:0">
-      <button type="button" class="btn" id="material-batch-toggle">表格内编辑</button>
+      <button type="button" class="btn" id="material-quick-low-stock">低库存</button>
+      <button type="button" class="btn" id="material-batch-toggle">表格内快改</button>
       <button type="button" class="btn primary hidden" id="material-batch-save">保存修改</button>
       <button type="button" class="btn hidden" id="material-batch-cancel">取消</button>
     </div>
@@ -38,16 +64,20 @@
   </div>
   <table id="materials-table">
     <colgroup>
-      <col class="mc-code"><col class="mc-name"><col class="mc-rev"><col class="mc-spec">
-      <col class="mc-unit"><col class="mc-cat"><col class="mc-ptype"><col class="mc-usage"><col class="mc-mat"><col class="mc-grade">
-      <col class="mc-supplier"><col class="mc-link"><col class="mc-status"><col class="mc-active">
-      <col class="mc-stock"><col class="mc-safe"><col class="mc-price"><col class="mc-tax"><col class="mc-remark"><col class="mc-actions">
+      <col class="mc-name"><col class="mc-model"><col class="mc-type"><col class="mc-cat"><col class="mc-package">
+      <col class="mc-stock"><col class="mc-location"><col class="mc-remark"><col class="mc-actions">
     </colgroup>
     <thead>
       <tr>
-        <th>编码</th><th>名称</th><th>当前版本</th><th>规格/图号</th><th>单位</th><th>物料分类</th><th>类型</th>
-        <th>用途</th><th>材质</th><th>等级</th>
-        <th>默认供应商</th><th>采购链接</th><th>编辑状态</th><th>启用状态</th><th>当前库存</th><th>安全库存</th><th>单价</th><th>税率</th><th>备注</th><th>操作</th>
+        <th>名称</th>
+        <th>型号</th>
+        <th>类型</th>
+        <th>分类</th>
+        <th>封装</th>
+        <th>库存</th>
+        <th>库位</th>
+        <th>备注</th>
+        <th>操作</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -55,53 +85,51 @@
 </div>
 
 <div id="material-modal" class="modal hidden">
-  <div class="modal-body">
+  <div class="modal-body inventory-modal">
     <h3 id="material-modal-title">新增物料</h3>
-    <form id="material-form" class="form-grid">
+    <form id="material-form" class="form-grid inventory-form-grid">
       <input type="hidden" id="m_id">
       <label>编码<input id="m_code" placeholder="保存后自动生成" readonly></label>
-      <label>名称<input id="m_name" required></label>
-      <label class="full">规格/图号<textarea id="m_spec_draw" rows="2" placeholder="第一行：规格；第二行：图号（可选）"></textarea></label>
+      <label>名称<input id="m_name" required placeholder="例如：贴片电阻 / 减速电机 / 20x20 铝型材"></label>
+      <label>型号 / 参数<textarea id="m_spec_draw" rows="2" placeholder="可写型号、关键参数、规格或图号"></textarea></label>
+      <label>物料类型
+        <select id="m_material_type"></select>
+      </label>
+      <label>分类
+        <select id="m_category" onchange="refreshSupplierOptions()">
+          <option value="">请选择分类</option>
+        </select>
+      </label>
+      <label>封装<input id="m_package_name" placeholder="例如：0402 / SOT-23 / 结构件可留空"></label>
+      <label>库位<input id="m_storage_location" placeholder="例如：A2-3 / 五金箱1 / 钢材架"></label>
       <label>单位
         <select id="m_unit"></select>
-      </label>
-      <label>物料分类
-        <select id="m_category" onchange="refreshSupplierOptions()">
-          <option value="">请选择物料分类</option>
-        </select>
-      </label>
-      <label>类型
-        <select id="m_part_type">
-          <option value="standard">标准件</option>
-          <option value="custom">自制件</option>
-          <option value="assembly">装配件</option>
-        </select>
       </label>
       <label>默认供应商
         <select id="m_default_supplier"></select>
       </label>
-      <label>税率
-        <select id="m_tax_rate"></select>
-      </label>
-      <label>采购链接<input id="m_purchase_link" placeholder="https://..."></label>
-      <label>用途<input id="m_usage"></label>
-      <label>材质
+      <label>品牌 / 材质
         <select id="m_material_name_attr"></select>
       </label>
-      <label>等级
+      <label>等级 / 属性
         <select id="m_grade_attr"></select>
       </label>
       <label>单价<input id="m_unit_price" type="number" step="0.01" value="0"></label>
-      <label>安全库存<input id="m_safety_stock" type="number" step="0.01" value="0"></label>
+      <label>最低库存<input id="m_safety_stock" type="number" step="0.01" value="0"></label>
       <label>当前库存<input id="m_current_stock" type="number" step="0.01" value="0"></label>
-      <label>当前版本<input id="m_current_revision"></label>
+      <label>税率
+        <select id="m_tax_rate"></select>
+      </label>
+      <label>用途 / 所属项目<input id="m_usage" placeholder="例如：ROS 小车 / 电源板 / 常备件"></label>
+      <label>当前版本<input id="m_current_revision" placeholder="可填版本、批次或修订号"></label>
       <label>编辑状态
         <select id="m_status">
           <option value="draft">草稿</option>
           <option value="released">已发布</option>
         </select>
       </label>
-      <label class="full">备注<textarea id="m_remark" rows="2"></textarea></label>
+      <label class="full">采购链接<input id="m_purchase_link" placeholder="https://..."></label>
+      <label class="full">备注<textarea id="m_remark" rows="2" placeholder="记录替代料、适配型号、加工要求或补货说明"></textarea></label>
     </form>
     <div class="btn-row">
       <button class="btn primary" onclick="saveMaterial()">保存</button>
@@ -110,5 +138,19 @@
   </div>
 </div>
 
-<script src="/static/js/materials.js?v=20260410-3"></script>
+<div id="material-import-modal" class="modal hidden">
+  <div class="modal-body import-modal">
+    <h3>导入物料 Excel</h3>
+    <p class="modal-note">主页面不再常驻文件选择框，导入时在这里选择文件即可。</p>
+    <div class="import-modal-body">
+      <input type="file" id="material-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="material-import-confirm-btn">开始导入</button>
+        <button type="button" class="btn" id="material-import-cancel-btn">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/materials.js?v=20260416-2"></script>
 {% endblock %}
