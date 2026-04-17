@@ -1,31 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card">
-  <div class="filters">
-    <label>类别类型
-      <select id="c_type" onchange="onTypeChanged()">
-        <option value="category">元件分类</option>
-        <option value="unit">单位</option>
-        <option value="tax_rate">税率</option>
-        <option value="material_attr">品牌 / 系列</option>
-        <option value="grade">等级 / 属性</option>
-        <option value="product_category">产品分类</option>
-      </select>
-    </label>
-    <input id="c_name" placeholder="按名称搜索">
-    <button class="btn primary" onclick="openCategoryModal()">新增</button>
-    <button type="button" class="btn" onclick="location.href='/export/categories?type='+encodeURIComponent(document.getElementById('c_type').value)">导出 Excel</button>
+<div class="card categories-controls-card">
+  <div class="categories-controls">
+    <div class="categories-filter-block">
+      <div class="section-eyebrow">筛选条件</div>
+      <div class="categories-filter-fields">
+        <label>类别类型
+          <select id="c_type" onchange="onTypeChanged()">
+            <option value="category">元件分类</option>
+            <option value="unit">单位</option>
+            <option value="tax_rate">税率</option>
+            <option value="material_attr">品牌 / 系列</option>
+            <option value="grade">等级 / 属性</option>
+            <option value="product_category">产品分类</option>
+          </select>
+        </label>
+        <label class="categories-search-field">搜索
+          <input id="c_name" placeholder="按元件分类搜索">
+        </label>
+      </div>
+    </div>
+    <div class="categories-action-block">
+      <div class="section-eyebrow">快速操作</div>
+      <div class="categories-actions">
+        <button class="btn primary" onclick="openCategoryModal()">新增</button>
+        <button type="button" class="btn success" onclick="location.href='/export/categories?type='+encodeURIComponent(document.getElementById('c_type').value)">
+          <span class="btn-prefix" aria-hidden="true">↧</span>
+          导出 Excel
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 <div id="msg" class="msg"></div>
-<div class="card">
-  <div class="list-total"><span id="cat-record-total">共 0 条记录</span></div>
-  <table>
+<div class="card categories-card">
+  <div class="card-title-row categories-toolbar">
+    <div class="categories-summary">
+      <h3 id="cat-table-title">分类列表</h3>
+      <span id="cat-record-total" class="record-badge">共 0 条</span>
+    </div>
+    <div id="cat-page-summary" class="list-total-edge"></div>
+  </div>
+  <table class="categories-table">
     <thead>
       <tr><th>名称</th><th id="th-prefix">编码前缀</th><th>排序</th><th>状态</th><th>备注</th><th>操作</th></tr>
     </thead>
     <tbody id="cat-tbody"></tbody>
   </table>
+  <div class="table-pagination" id="cat-pagination">
+    <button type="button" class="btn sm" id="cat-prev-page">上一页</button>
+    <span id="cat-pagination-text" class="pagination-text">第 1 / 1 页</span>
+    <button type="button" class="btn sm" id="cat-next-page">下一页</button>
+  </div>
 </div>
 
 <div id="cat-modal" class="modal hidden">

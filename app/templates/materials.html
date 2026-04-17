@@ -4,45 +4,55 @@
 
 <section class="card tool-panel material-library-panel">
   <div class="tool-panel-top material-library-top">
-    <div class="tool-panel-actions">
-      <button class="btn primary action-btn" onclick="openMaterialModal()">新增物料</button>
-      <button type="button" class="btn action-btn" id="material-import-open-btn">导入 Excel</button>
-      <a class="btn action-btn" href="/import/materials/template">下载模板</a>
-      <a class="btn action-btn" href="/export/materials?view={{ view_mode or 'all' }}">导出 Excel</a>
-      <a class="btn action-btn" href="/ui/categories">分类管理</a>
+    <div class="material-library-section">
+      <div class="section-eyebrow">操作</div>
+      <div class="tool-panel-actions">
+        <button class="btn primary action-btn" onclick="openMaterialModal()">新增物料</button>
+        <button type="button" class="btn action-btn" id="material-import-open-btn">导入 Excel</button>
+        <a class="btn action-btn" href="/import/materials/template">下载模板</a>
+        <a class="btn action-btn" href="/export/materials?view={{ view_mode or 'all' }}">导出 Excel</a>
+        <a class="btn action-btn" href="/ui/categories">分类管理</a>
+      </div>
     </div>
-  </div>
 
-  <div class="summary-inline">
-    <div class="summary-chip">
-      <span class="summary-chip-label">物料总数</span>
-      <strong class="summary-chip-value" id="m_total_count">0</strong>
+    <div class="summary-inline">
+      <div class="summary-chip">
+        <span class="summary-chip-label">物料总数</span>
+        <strong class="summary-chip-value" id="m_total_count">0</strong>
+      </div>
+      <div class="summary-chip summary-chip-alert">
+        <span class="summary-chip-label">低库存数量</span>
+        <strong class="summary-chip-value" id="m_low_stock_count">0</strong>
+      </div>
+      <div class="summary-chip">
+        <span class="summary-chip-label">分类数量</span>
+        <strong class="summary-chip-value" id="m_category_count">0</strong>
+      </div>
+      <div class="summary-chip">
+        <span class="summary-chip-label">库位数量</span>
+        <strong class="summary-chip-value" id="m_location_count">0</strong>
+      </div>
     </div>
-    <div class="summary-chip summary-chip-alert">
-      <span class="summary-chip-label">低库存数量</span>
-      <strong class="summary-chip-value" id="m_low_stock_count">0</strong>
-    </div>
-    <div class="summary-chip">
-      <span class="summary-chip-label">分类数量</span>
-      <strong class="summary-chip-value" id="m_category_count">0</strong>
-    </div>
-    <div class="summary-chip">
-      <span class="summary-chip-label">库位数量</span>
-      <strong class="summary-chip-value" id="m_location_count">0</strong>
-    </div>
-  </div>
 
-  <div class="filters inventory-filters inventory-filters-main material-library-filters">
-    <input id="f_keyword" placeholder="搜索 名称 / 型号 / 参数" autocomplete="off">
-    <select id="f_material_type"></select>
-    <select id="f_category"></select>
-    <select id="f_package"></select>
-    <select id="f_location"></select>
-    <label class="toggle-pill">
-      <input id="f_low_stock_only" type="checkbox">
-      <span>仅看低库存</span>
-    </label>
-    <button type="button" class="btn" id="material-clear-filters">清空筛选</button>
+    <div class="section-divider"></div>
+
+    <div class="material-library-section">
+      <div class="section-eyebrow">筛选条件</div>
+      <div class="filters inventory-filters inventory-filters-main material-library-filters material-library-search-row">
+        <input id="f_keyword" placeholder="搜索 名称 / 型号 / 参数" autocomplete="off">
+      </div>
+      <div class="filters inventory-filters inventory-filters-main material-library-filters material-library-filter-row">
+        <select id="f_material_type"></select>
+        <select id="f_category"></select>
+        <select id="f_package"></select>
+        <select id="f_location"></select>
+        <label class="toggle-pill">
+          <input id="f_low_stock_only" type="checkbox">
+          <span>仅看低库存</span>
+        </label>
+        <button type="button" class="filter-clear-link" id="material-clear-filters">清空筛选</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -52,7 +62,6 @@
   <div class="card-title-row materials-batch-bar inventory-table-toolbar">
     <div class="table-toolbar-left">
       <strong>物料列表</strong>
-      <span class="muted-mini">表格优先，尽量让查找、维护和补库存都在这一屏完成</span>
     </div>
     <div class="filters" style="margin:0">
       <button type="button" class="btn" id="material-quick-low-stock">低库存</button>
