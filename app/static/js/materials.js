@@ -17,13 +17,6 @@ let allMaterials = [];
 let allSuppliers = [];
 let allCategories = [];
 let optionMap = { unit: [], tax_rate: [], material_attr: [], grade: [] };
-let materialTableEditMode = false;
-
-const statusMap = {
-  draft: "草稿",
-  released: "已发布",
-  obsolete: "已归档",
-};
 
 const escapeHtml = (s) =>
   String(s ?? "")
@@ -95,7 +88,6 @@ function getFilters() {
     category: normStr(document.getElementById("f_category")?.value),
     package_name: normStr(document.getElementById("f_package")?.value),
     storage_location: normStr(document.getElementById("f_location")?.value),
-    low_stock_only: document.getElementById("f_low_stock_only")?.checked || false,
   };
 }
 
@@ -121,19 +113,28 @@ function filterMaterials() {
       (!filters.material_type || getMaterialType(material) === filters.material_type) &&
       (!filters.category || normStr(material.category) === filters.category) &&
       (!filters.package_name || normStr(material.package_name) === filters.package_name) &&
-      (!filters.storage_location || normStr(material.storage_location) === filters.storage_location) &&
-      (!filters.low_stock_only || isLowStock(material))
+      (!filters.storage_location || normStr(material.storage_location) === filters.storage_location)
     );
   });
 }
 
 function renderSummary(rows) {
-  const categorySet = new Set(rows.map((item) => normStr(item.category)).filter(Boolean));
-  const locationSet = new Set(rows.map((item) => normStr(item.storage_location)).filter(Boolean));
-  document.getElementById("m_total_count").textContent = rows.length;
-  document.getElementById("m_low_stock_count").textContent = rows.filter(isLowStock).length;
-  document.getElementById("m_category_count").textContent = categorySet.size;
-  document.getElementById("m_location_count").textContent = locationSet.size;
+  const lowStockCount = rows.filter((item) => isLowStock(item)).length;
+  const uncategorizedCount = rows.filter((item) => !normStr(item.category)).length;
+  const now = Date.now();
+  const recentCount = rows.filter((item) => {
+    if (!item.created_at) return false;
+    const createdAt = new Date(item.created_at).getTime();
+    return Number.isFinite(createdAt) && now - createdAt <= 7 * 24 * 60 * 60 * 1000;
+  }).length;
+  const setText = (id, value) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  };
+  setText("m_total_count", rows.length);
+  setText("m_low_stock_count", lowStockCount);
+  setText("m_recent_count", recentCount);
+  setText("m_uncategorized_count", uncategorizedCount);
 }
 
 function renderOptionSelect(selectId, options, placeholder) {
@@ -216,42 +217,10 @@ function refreshSupplierOptions(selected = "") {
   if (selected) supplierSelect.value = selected;
 }
 
-function setMaterialFiltersDisabled(disabled) {
-  ["f_keyword", "f_material_type", "f_category", "f_package", "f_location", "f_low_stock_only"].forEach((id) => {
-    const element = document.getElementById(id);
-    if (element) element.disabled = disabled;
-  });
-}
-
-function updateMaterialBatchBar() {
-  const toggle = document.getElementById("material-batch-toggle");
-  const save = document.getElementById("material-batch-save");
-  const cancel = document.getElementById("material-batch-cancel");
-  if (toggle) toggle.classList.toggle("hidden", materialTableEditMode);
-  if (save) save.classList.toggle("hidden", !materialTableEditMode);
-  if (cancel) cancel.classList.toggle("hidden", !materialTableEditMode);
-  setMaterialFiltersDisabled(materialTableEditMode);
-}
-
-function renderStatus(material) {
-  if (!material.is_active) return `<span class="tag obsolete">停用</span>`;
-  const status = material.status || "draft";
-  return `<span class="tag ${status}">${statusMap[status] || escapeHtml(status)}</span>`;
-}
-
 function renderStockCell(material) {
   const current = formatNumber(material.current_stock) || "0";
-  const safety = formatNumber(material.safety_stock) || "0";
   const klass = isLowStock(material) ? "stock-badge stock-badge-low" : "stock-badge";
-  return `<div class="stock-stack"><span class="${klass}">${current}</span><span class="muted-mini">最低 ${safety}</span></div>`;
-}
-
-function renderTypeSelect(material) {
-  const current = getMaterialType(material);
-  return `<select class="me-input me-type">${MATERIAL_TYPE_OPTIONS.map(
-    (item) =>
-      `<option value="${escapeAttr(item)}"${item === current ? " selected" : ""}>${escapeHtml(item)}</option>`
-  ).join("")}</select>`;
+  return `<div class="stock-stack"><span class="${klass}">${current}</span></div>`;
 }
 
 function renderRemarkCell(material) {
@@ -268,71 +237,33 @@ function renderMaterialMetaSummary(material) {
   return parts.length ? `<div class="material-subline material-mobile-meta">${escapeHtml(parts.join(" / "))}</div>` : "";
 }
 
-function materialRowUnchanged(material, payload, spec, drawingNo) {
-  return (
-    normStr(payload.name) === normStr(material.name) &&
-    normStr(spec) === normStr(material.spec) &&
-    normStr(drawingNo) === normStr(material.drawing_no) &&
-    normStr(payload.material_type) === normStr(material.material_type) &&
-    normStr(payload.package_name) === normStr(material.package_name) &&
-    normStr(payload.storage_location) === normStr(material.storage_location) &&
-    normStr(payload.remark) === normStr(material.remark) &&
-    Number(payload.current_stock) === Number(material.current_stock || 0) &&
-    Number(payload.safety_stock) === Number(material.safety_stock || 0)
-  );
-}
-
 function renderTable() {
   const rows = filterMaterials();
   renderSummary(rows);
-  const editing = materialTableEditMode;
   tbody.innerHTML = rows
     .map((material) => {
-      const actionsDisabled = editing ? "disabled" : "";
       const actions = `
         <div class="material-actions">
-          <button type="button" class="btn sm" onclick="editMaterial(${material.id})" ${actionsDisabled}>编辑</button>
-          <button type="button" class="btn sm" onclick="disableMaterial(${material.id})" ${actionsDisabled}>停用</button>
-          <button type="button" class="btn sm" onclick="removeMaterial(${material.id})" ${actionsDisabled}>删除</button>
+          <button type="button" class="btn sm" onclick="editMaterial(${material.id})">编辑</button>
+          <button type="button" class="btn sm" onclick="disableMaterial(${material.id})">停用</button>
+          <button type="button" class="btn sm" onclick="removeMaterial(${material.id})">删除</button>
           <a class="btn sm" href="/ui/materials/${material.id}/revisions">版本</a>
         </div>`;
-      if (!editing) {
-        return `<tr data-mid="${material.id}">
-          <td>
-            <div class="material-name-cell">${escapeHtml(material.name || "")}</div>
-            <div class="material-subline">${escapeHtml(material.code || "")}</div>
-            ${renderMaterialMetaSummary(material)}
-          </td>
-          <td>
-            <div class="material-model-cell">${escapeHtml(formatModel(material) || "未填写")}</div>
-            <div class="material-subline">${renderStatus(material)}</div>
-          </td>
-          <td><span class="meta-pill meta-pill-type">${escapeHtml(getMaterialType(material))}</span></td>
-          <td><span class="category-chip">${escapeHtml(material.category || "未分类")}</span></td>
-          <td><span class="meta-pill">${escapeHtml(material.package_name || "—")}</span></td>
-          <td>${renderStockCell(material)}</td>
-          <td><span class="meta-pill">${escapeHtml(material.storage_location || "—")}</span></td>
-          <td>${renderRemarkCell(material)}</td>
-          <td>${actions}</td>
-        </tr>`;
-      }
       return `<tr data-mid="${material.id}">
         <td>
-          <input type="text" class="me-input me-name" value="${escapeAttr(material.name || "")}">
+          <div class="material-name-cell">${escapeHtml(material.name || "")}</div>
           <div class="material-subline">${escapeHtml(material.code || "")}</div>
+          ${renderMaterialMetaSummary(material)}
         </td>
-        <td><textarea class="me-input me-specdraw" rows="2" spellcheck="false">${escapeTextarea(
-          [material.spec || "", material.drawing_no || ""].filter(Boolean).join("\n")
-        )}</textarea></td>
-        <td>${renderTypeSelect(material)}</td>
-        <td><span class="category-chip">${escapeHtml(material.category || "未分类")}</span></td>
-        <td><input type="text" class="me-input me-package" value="${escapeAttr(material.package_name || "")}"></td>
         <td>
-          <input type="number" class="me-input me-cstock" step="0.001" value="${Number(material.current_stock ?? 0)}">
-          <input type="number" class="me-input me-sstock" step="0.001" value="${Number(material.safety_stock ?? 0)}" placeholder="最低库存">
+          <div class="material-model-cell">${escapeHtml(formatModel(material) || "未填写")}</div>
         </td>
-        <td><input type="text" class="me-input me-location" value="${escapeAttr(material.storage_location || "")}"></td>
-        <td><textarea class="me-input me-remark" rows="2">${escapeTextarea(material.remark || "")}</textarea></td>
+        <td><span class="meta-pill meta-pill-type">${escapeHtml(getMaterialType(material))}</span></td>
+        <td><span class="category-chip">${escapeHtml(material.category || "未分类")}</span></td>
+        <td><span class="meta-pill">${escapeHtml(material.package_name || "—")}</span></td>
+        <td>${renderStockCell(material)}</td>
+        <td><span class="meta-pill">${escapeHtml(material.storage_location || "—")}</span></td>
+        <td>${renderRemarkCell(material)}</td>
         <td>${actions}</td>
       </tr>`;
     })
@@ -345,74 +276,6 @@ const showMsg = (message, err = false) => {
   msgBox.textContent = message;
   msgBox.className = err ? "msg err" : "msg ok";
 };
-
-async function saveMaterialBatchEdits() {
-  const rows = [...tbody.querySelectorAll("tr[data-mid]")];
-  if (!rows.length) {
-    materialTableEditMode = false;
-    updateMaterialBatchBar();
-    renderTable();
-    return;
-  }
-  const errors = [];
-  let saved = 0;
-  let skipped = 0;
-  for (const row of rows) {
-    const id = Number(row.dataset.mid);
-    const material = allMaterials.find((item) => item.id === id);
-    if (!material) continue;
-    const name = normStr(row.querySelector(".me-name")?.value);
-    if (!name) {
-      errors.push(`${material.code || id}：名称不能为空`);
-      continue;
-    }
-    const { spec, drawing_no } = parseSpecDrawingInput(row.querySelector(".me-specdraw")?.value || "");
-    const payload = {
-      name,
-      spec,
-      drawing_no,
-      material_type: normStr(row.querySelector(".me-type")?.value) || null,
-      package_name: normStr(row.querySelector(".me-package")?.value) || null,
-      storage_location: normStr(row.querySelector(".me-location")?.value) || null,
-      remark: normStr(row.querySelector(".me-remark")?.value) || null,
-      current_stock: Number(row.querySelector(".me-cstock")?.value || 0),
-      safety_stock: Number(row.querySelector(".me-sstock")?.value || 0),
-    };
-    if (materialRowUnchanged(material, payload, spec, drawing_no)) {
-      skipped += 1;
-      continue;
-    }
-    const response = await fetch(`/materials/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      let detail = "保存失败";
-      try {
-        const data = await response.json();
-        detail = data.detail || detail;
-        if (Array.isArray(detail)) detail = JSON.stringify(detail);
-      } catch (_) {}
-      errors.push(`${material.code || id}：${detail}`);
-      continue;
-    }
-    saved += 1;
-  }
-  materialTableEditMode = false;
-  updateMaterialBatchBar();
-  await loadMaterials();
-  if (errors.length) {
-    showMsg(
-      `已保存 ${saved} 条，跳过 ${skipped} 条，失败 ${errors.length} 条：${errors.slice(0, 2).join("；")}${
-        errors.length > 2 ? "…" : ""
-      }`,
-      true
-    );
-    return;
-  }
-  showMsg(saved ? `已保存 ${saved} 条${skipped ? `，未改动 ${skipped} 条` : ""}` : "没有检测到需要保存的修改");
-}
 
 async function loadSuppliers() {
   const response = await fetch("/suppliers");
@@ -504,7 +367,6 @@ function editMaterial(id) {
     "grade_attr",
     "purchase_link",
     "current_revision",
-    "status",
     "remark",
   ].forEach((key) => {
     const element = document.getElementById(`m_${key}`);
@@ -515,9 +377,6 @@ function editMaterial(id) {
     .join("\n");
   if (!document.getElementById("m_material_type").value) {
     document.getElementById("m_material_type").value = getMaterialType(material);
-  }
-  if (material.status === "obsolete") {
-    document.getElementById("m_status").value = "draft";
   }
   refreshSupplierOptions(material.default_supplier || "");
 }
@@ -544,7 +403,6 @@ async function saveMaterial() {
     grade_attr: document.getElementById("m_grade_attr").value || null,
     purchase_link: normStr(document.getElementById("m_purchase_link").value) || null,
     current_revision: normStr(document.getElementById("m_current_revision").value) || null,
-    status: document.getElementById("m_status").value,
     remark: normStr(document.getElementById("m_remark").value) || null,
   };
   if (!payload.name) return showMsg("名称必填", true);
@@ -629,19 +487,12 @@ document.getElementById("material-import-confirm-btn")?.addEventListener("click"
   await importMaterialsFromFile(file);
 });
 
-document.getElementById("material-quick-low-stock")?.addEventListener("click", () => {
-  const checkbox = document.getElementById("f_low_stock_only");
-  checkbox.checked = !checkbox.checked;
-  renderTable();
-});
-
 document.getElementById("material-clear-filters")?.addEventListener("click", () => {
   document.getElementById("f_keyword").value = "";
   document.getElementById("f_material_type").value = "";
   document.getElementById("f_category").value = "";
   document.getElementById("f_package").value = "";
   document.getElementById("f_location").value = "";
-  document.getElementById("f_low_stock_only").checked = false;
   renderTable();
 });
 
@@ -651,26 +502,9 @@ document.getElementById("material-clear-filters")?.addEventListener("click", () 
   ["f_category", "change"],
   ["f_package", "change"],
   ["f_location", "change"],
-  ["f_low_stock_only", "change"],
 ].forEach(([id, eventName]) => {
   const element = document.getElementById(id);
   if (element) element.addEventListener(eventName, renderTable);
-});
-
-document.getElementById("material-batch-toggle")?.addEventListener("click", () => {
-  materialTableEditMode = true;
-  updateMaterialBatchBar();
-  renderTable();
-});
-
-document.getElementById("material-batch-cancel")?.addEventListener("click", () => {
-  materialTableEditMode = false;
-  updateMaterialBatchBar();
-  renderTable();
-});
-
-document.getElementById("material-batch-save")?.addEventListener("click", () => {
-  saveMaterialBatchEdits().catch((error) => showMsg(error.message || "保存失败", true));
 });
 
 renderMaterialTypeOptions();
@@ -679,5 +513,3 @@ loadCategories()
   .then(() => loadSystemOptions())
   .then(() => loadSuppliers())
   .then(() => loadMaterials());
-
-updateMaterialBatchBar();

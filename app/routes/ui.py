@@ -24,7 +24,6 @@ def dashboard_page(request: Request):
         request,
         "materials.html",
         "物料库",
-        page_subtitle="管理电阻、电容、芯片、电机、钢材等所有物料",
         view_mode="all",
     )
 
@@ -35,19 +34,7 @@ def materials_page(request: Request):
         request,
         "materials.html",
         "物料库",
-        page_subtitle="管理电阻、电容、芯片、电机、钢材等所有物料",
         view_mode="all",
-    )
-
-
-@router.get("/standard-materials")
-def standard_materials_page(request: Request):
-    return _render(
-        request,
-        "materials.html",
-        "常备物料",
-        page_subtitle="集中管理常用物料与库存余量",
-        view_mode="standard",
     )
 
 
@@ -57,7 +44,6 @@ def nonstandard_materials_page(request: Request):
         request,
         "materials.html",
         "板卡 / 模块",
-        page_subtitle="查看自制板卡、模块与整机类物料",
         view_mode="nonstandard",
     )
 
@@ -120,7 +106,7 @@ def suppliers_page(request: Request):
 
 @router.get("/categories")
 def categories_page(request: Request):
-    return _render(request, "categories.html", "分类管理", page_subtitle="维护物料分类与常用选项")
+    return _render(request, "categories.html", "分类管理")
 
 
 @router.get("/settings/integrations")

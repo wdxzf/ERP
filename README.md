@@ -27,17 +27,14 @@
 更适合这个项目的方式是：
 
 - 开发阶段：本地直接跑为主
-- 验证和部署阶段：Docker 跑
 
 原因很简单：
 
 - 本地直跑有 `--reload`，改 Python、模板、静态文件都更快
-- Docker 更适合做最终验证、演示和两人共用
 - 两套方式分开用，能减少“明明改了代码但页面没变”的困惑
 
 一个很重要的习惯：
 
-- 不要同时开“本地直跑”和“Docker”两套服务，尤其不要同时操作同一份 `data/inventory.db`
 
 ## 开发阶段
 
@@ -150,43 +147,6 @@ http://127.0.0.1:8000/inventory
 
 不会自动生成演示数据，也不会自动预置物料分类。
 
-## 验证与部署阶段
-
-适合：
-
-- 验收本次改动
-- 模拟正式环境
-- 演示给别人看
-- 在一台固定电脑上长期运行
-
-前提：
-
-- 电脑已安装 Docker Desktop 或 Docker Engine
-
-步骤：
-
-1. 如果你刚才在本地跑了 `uvicorn`，先停掉
-2. 进入项目根目录
-3. 执行：
-
-```bash
-docker compose up -d --build
-```
-
-4. 打开：
-
-```text
-http://127.0.0.1:8000/inventory
-```
-
-如果你想改端口或修改 BOM 删除口令，再把 `.env.example` 复制成 `.env` 后修改。
-
-停止：
-
-```bash
-docker compose down
-```
-
 ## 目录结构
 
 ```text
@@ -195,8 +155,6 @@ docker compose down
 ├── data/                SQLite 数据库目录
 ├── uploads/             上传附件目录
 ├── scripts/             辅助脚本
-├── Dockerfile
-├── docker-compose.yml
 ├── requirements.txt
 ├── LICENSE
 └── DISCLAIMER.md
@@ -206,7 +164,7 @@ docker compose down
 
 如果你希望“我新增的物料，对方刷新就能看到”，不要让两个人各自跑一份仓库；应该让两个人访问同一台机器上的同一个服务。
 
-### 推荐方式：Docker 部署在一台固定电脑
+### 推荐方式：固定一台电脑持续运行
 
 适合：
 
@@ -214,40 +172,14 @@ docker compose down
 - 暂时不做登录
 - 先共用一份 SQLite 数据
 
-### 1. 安装 Docker
+### 1. 启动
 
-在作为共享主机的那台电脑上安装：
+在共享主机上先按“开发阶段”完成环境准备，然后启动服务：
 
-- Windows / macOS：Docker Desktop
-- Linux：Docker Engine
+- Windows：双击 start.bat
+- Linux / macOS / WSL：ash start.sh
 
-### 2. 准备 `.env`
-
-把 `.env.example` 复制为 `.env`，按需修改：
-
-```text
-ERP_PORT=8000
-BOM_DELETE_PASSWORD=改成你们自己约定的新口令
-```
-
-说明：
-
-- `ERP_PORT` 是访问端口
-- `BOM_DELETE_PASSWORD` 是删除 BOM 时使用的口令
-- 如果不建 `.env`，也能启动，但会使用默认值
-
-### 3. 启动
-
-```bash
-docker compose up -d --build
-```
-
-如果你想一键启动，也可以直接用脚本：
-
-- Linux / macOS：`bash scripts/start_docker.sh`
-- Windows：双击 `scripts/start_docker.bat`
-
-### 4. 访问
+### 2. 访问
 
 - 共享主机本机：`http://127.0.0.1:8000/inventory`
 - 另一台电脑：`http://共享主机局域网IP:8000/inventory`
@@ -260,16 +192,16 @@ http://192.168.1.20:8000/inventory
 
 如果另一台电脑打不开，通常先检查共享主机防火墙是否放行 `8000/TCP`。
 
-### 5. 数据保存位置
+### 3. 数据保存位置
 
-当前 Docker 配置会把数据直接保存在项目目录：
+当前项目会把数据直接保存在项目目录：
 
 - 数据库：`data/`
 - 上传附件：`uploads/`
 
-所以容器重启后，数据仍会保留。
+所以服务重启后，数据仍会保留。
 
-### 6. 备份建议
+### 4. 备份建议
 
 备份时至少一起备份：
 
