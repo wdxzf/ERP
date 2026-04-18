@@ -147,22 +147,6 @@ function renderViewBadge() {
   if (badge) badge.textContent = getViewModeLabel();
 }
 
-function renderFilterSummary(filters, rows) {
-  const activeLabels = [];
-  if (filters.keyword) activeLabels.push(`关键词“${filters.keyword}”`);
-  if (filters.materialType) activeLabels.push(`类型 ${filters.materialType}`);
-  if (filters.category) activeLabels.push(`分类 ${filters.category}`);
-  if (filters.storageLocation) activeLabels.push(`库位 ${filters.storageLocation}`);
-
-  const summary = document.getElementById("materials-filter-summary");
-  if (!summary) return;
-  if (!activeLabels.length) {
-    summary.textContent = `当前视图：${getViewModeLabel()}，未启用筛选`;
-    return;
-  }
-  summary.textContent = `已筛选 ${activeLabels.length} 项，匹配 ${rows.length} 条：${activeLabels.join(" / ")}`;
-}
-
 function renderSummary(rows) {
   const lowStockCount = rows.filter((item) => isLowStock(item)).length;
   const uncategorizedCount = rows.filter((item) => !normStr(item.category)).length;
@@ -371,11 +355,9 @@ function renderMobileList(rows) {
 }
 
 function renderTable() {
-  const filters = getFilters();
   const rows = filterMaterials();
   renderSummary(rows);
   renderViewBadge();
-  renderFilterSummary(filters, rows);
 
   if (!rows.length) {
     setTableState("暂无匹配数据");
