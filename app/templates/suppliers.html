@@ -6,7 +6,7 @@
     <input id="s_name" placeholder="按公司名称搜索">
     <input id="s_credit_code" placeholder="按统一信用代码搜索">
     <button class="btn primary" onclick="openSupplierModal()">新增供应商</button>
-    <a class="btn" href="/export/suppliers">导出 Excel</a>
+    <a class="btn" href="/api/export/suppliers">导出 Excel</a>
   </div>
 </div>
 
@@ -56,5 +56,8 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block page_scripts %}
 <script src="/static/js/suppliers.js"></script>
 {% endblock %}

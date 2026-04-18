@@ -19,7 +19,7 @@ async function loadTaobaoConfig() {
   if (hint) {
     hint.textContent = `${window.location.origin}/integrations/taobao/callback`;
   }
-  const res = await fetch("/integrations/taobao/config");
+  const res = await http.fetch("/integrations/taobao/config");
   if (!res.ok) return;
   const c = await res.json();
   document.getElementById("tb_app_key").value = c.taobao_app_key || "";
@@ -44,7 +44,7 @@ document.getElementById("tb_save").addEventListener("click", async () => {
   };
   const sec = document.getElementById("tb_app_secret").value;
   if (sec) payload.taobao_app_secret = sec;
-  const res = await fetch("/integrations/taobao/config", {
+  const res = await http.fetch("/integrations/taobao/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -59,7 +59,7 @@ document.getElementById("tb_save").addEventListener("click", async () => {
 });
 
 document.getElementById("tb_oauth").addEventListener("click", async () => {
-  const res = await fetch("/integrations/taobao/oauth-url", { method: "POST" });
+  const res = await http.fetch("/integrations/taobao/oauth-url", { method: "POST" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail) || "无法生成授权链接", true);
@@ -69,7 +69,7 @@ document.getElementById("tb_oauth").addEventListener("click", async () => {
 });
 
 async function loadWooCommerceConfig() {
-  const res = await fetch("/integrations/woocommerce/config");
+  const res = await http.fetch("/integrations/woocommerce/config");
   if (!res.ok) return;
   const c = await res.json();
   const urlEl = document.getElementById("wc_site_url");
@@ -92,7 +92,7 @@ document.getElementById("wc_save").addEventListener("click", async () => {
   const cs = document.getElementById("wc_cs").value;
   if (ck) payload.woocommerce_consumer_key = ck;
   if (cs) payload.woocommerce_consumer_secret = cs;
-  const res = await fetch("/integrations/woocommerce/config", {
+  const res = await http.fetch("/integrations/woocommerce/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

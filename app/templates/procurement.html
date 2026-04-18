@@ -9,16 +9,6 @@
     <button type="button" class="btn" onclick="exportProcurementExcel()">导出 Excel</button>
   </div>
 </div>
-<script>
-function exportProcurementExcel() {
-  const bomId = document.getElementById('p_bom_id').value;
-  const qty = document.getElementById('p_qty').value;
-  if (!bomId) { alert('请先选择 BOM'); return; }
-  const q = parseFloat(qty);
-  if (!q || q <= 0) { alert('计划生产数量须大于 0'); return; }
-  location.href = '/export/procurement?bom_id=' + encodeURIComponent(bomId) + '&production_qty=' + encodeURIComponent(qty);
-}
-</script>
 <div id="msg" class="msg"></div>
 <div class="card">
   <div class="card-title-row">
@@ -40,5 +30,18 @@ function exportProcurementExcel() {
   </div>
   <div id="supplier-groups"></div>
 </div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function exportProcurementExcel() {
+  const bomId = document.getElementById('p_bom_id').value;
+  const qty = document.getElementById('p_qty').value;
+  if (!bomId) { alert('请先选择 BOM'); return; }
+  const q = parseFloat(qty);
+  if (!q || q <= 0) { alert('计划生产数量须大于 0'); return; }
+  location.href = '/api/export/procurement?bom_id=' + encodeURIComponent(bomId) + '&production_qty=' + encodeURIComponent(qty);
+}
+</script>
 <script src="/static/js/procurement.js"></script>
 {% endblock %}

@@ -9,6 +9,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app import models, schemas, taobao_client, woocommerce_client
+from app.modules.categories import service as categories_service
+from app.modules.materials import service as materials_service
 from app.utils import calc_total_price, money
 
 ALLOW_NEGATIVE_STOCK = False
@@ -18,81 +20,27 @@ ALLOW_NEGATIVE_STOCK = False
 # Material Categories
 # -------------------------
 def list_material_categories(db: Session):
-    return db.scalars(select(models.MaterialCategory).order_by(models.MaterialCategory.sort_order.asc())).all()
+    return categories_service.list_material_categories(db)
 
 
 def get_material_category(db: Session, category_id: int):
-    category = db.get(models.MaterialCategory, category_id)
-    if not category:
-        raise HTTPException(status_code=404, detail="Material category not found")
-    return category
+    return categories_service.get_material_category(db, category_id)
 
 
 def create_material_category(db: Session, payload: schemas.MaterialCategoryCreate):
-    exists_name = db.scalar(select(models.MaterialCategory).where(models.MaterialCategory.name == payload.name))
-    if exists_name:
-        raise HTTPException(status_code=400, detail="Category name already exists")
-    exists_prefix = db.scalar(select(models.MaterialCategory).where(models.MaterialCategory.code_prefix == payload.code_prefix))
-    if exists_prefix:
-        raise HTTPException(status_code=400, detail="Category code prefix already exists")
-    category = models.MaterialCategory(**payload.model_dump())
-    db.add(category)
-    db.commit()
-    db.refresh(category)
-    return category
+    return categories_service.create_material_category(db, payload)
 
 
 def update_material_category(db: Session, category_id: int, payload: schemas.MaterialCategoryUpdate):
-    category = get_material_category(db, category_id)
-    data = payload.model_dump(exclude_unset=True)
-    if "name" in data and data["name"]:
-        exists_name = db.scalar(
-            select(models.MaterialCategory).where(
-                models.MaterialCategory.name == data["name"],
-                models.MaterialCategory.id != category_id,
-            )
-        )
-        if exists_name:
-            raise HTTPException(status_code=400, detail="Category name already exists")
-    if "code_prefix" in data and data["code_prefix"]:
-        exists_prefix = db.scalar(
-            select(models.MaterialCategory).where(
-                models.MaterialCategory.code_prefix == data["code_prefix"],
-                models.MaterialCategory.id != category_id,
-            )
-        )
-        if exists_prefix:
-            raise HTTPException(status_code=400, detail="Category code prefix already exists")
-    for key, value in data.items():
-        setattr(category, key, value)
-    db.commit()
-    db.refresh(category)
-    return category
+    return categories_service.update_material_category(db, category_id, payload)
 
 
 def soft_delete_material_category(db: Session, category_id: int):
-    category = get_material_category(db, category_id)
-    category.is_active = False
-    db.commit()
-    db.refresh(category)
-    return category
+    return categories_service.soft_delete_material_category(db, category_id)
 
 
 def hard_delete_material_category(db: Session, category_id: int):
-    category = get_material_category(db, category_id)
-    in_materials = db.scalar(
-        select(func.count(models.Material.id)).where(models.Material.category == category.name)
-    ) or 0
-    if in_materials:
-        raise HTTPException(status_code=400, detail="该物料分类已被物料使用，无法删除")
-    in_suppliers = db.scalar(
-        select(func.count(models.Supplier.id)).where(models.Supplier.supplier_categories.like(f"%{category.name}%"))
-    ) or 0
-    if in_suppliers:
-        raise HTTPException(status_code=400, detail="该物料分类已被供应商使用，无法删除")
-    db.delete(category)
-    db.commit()
-    return {"message": "Material category deleted"}
+    return categories_service.hard_delete_material_category(db, category_id)
 
 
 # -------------------------
@@ -102,94 +50,22 @@ VALID_OPTION_TYPES = {"unit", "tax_rate", "material_attr", "grade", "product_cat
 
 
 def list_system_options(db: Session, option_type: str | None = None):
-    query = select(models.SystemOption)
-    if option_type:
-        query = query.where(models.SystemOption.option_type == option_type)
-    query = query.order_by(models.SystemOption.option_type.asc(), models.SystemOption.sort_order.asc(), models.SystemOption.id.asc())
-    return db.scalars(query).all()
-
+    return categories_service.list_system_options(db, option_type)
 
 def get_system_option(db: Session, option_id: int):
-    option = db.get(models.SystemOption, option_id)
-    if not option:
-        raise HTTPException(status_code=404, detail="System option not found")
-    return option
-
+    return categories_service.get_system_option(db, option_id)
 
 def create_system_option(db: Session, payload: schemas.SystemOptionCreate):
-    if payload.option_type not in VALID_OPTION_TYPES:
-        raise HTTPException(status_code=400, detail="Invalid option_type")
-    exists = db.scalar(
-        select(models.SystemOption).where(
-            models.SystemOption.option_type == payload.option_type,
-            models.SystemOption.name == payload.name,
-        )
-    )
-    if exists:
-        raise HTTPException(status_code=400, detail="Option already exists in this type")
-    option = models.SystemOption(**payload.model_dump())
-    db.add(option)
-    db.commit()
-    db.refresh(option)
-    return option
-
+    return categories_service.create_system_option(db, payload)
 
 def update_system_option(db: Session, option_id: int, payload: schemas.SystemOptionUpdate):
-    option = get_system_option(db, option_id)
-    data = payload.model_dump(exclude_unset=True)
-    if "name" in data and data["name"]:
-        exists = db.scalar(
-            select(models.SystemOption).where(
-                models.SystemOption.option_type == option.option_type,
-                models.SystemOption.name == data["name"],
-                models.SystemOption.id != option_id,
-            )
-        )
-        if exists:
-            raise HTTPException(status_code=400, detail="Option already exists in this type")
-    for key, value in data.items():
-        setattr(option, key, value)
-    db.commit()
-    db.refresh(option)
-    return option
-
+    return categories_service.update_system_option(db, option_id, payload)
 
 def soft_delete_system_option(db: Session, option_id: int):
-    option = get_system_option(db, option_id)
-    option.is_active = False
-    db.commit()
-    db.refresh(option)
-    return option
-
+    return categories_service.soft_delete_system_option(db, option_id)
 
 def hard_delete_system_option(db: Session, option_id: int):
-    option = get_system_option(db, option_id)
-    if option.option_type == "unit":
-        used = db.scalar(select(func.count(models.Material.id)).where(models.Material.unit == option.name)) or 0
-        if used:
-            raise HTTPException(status_code=400, detail="该单位已被物料使用，无法删除")
-    elif option.option_type == "tax_rate":
-        used = db.scalar(select(func.count(models.Material.id)).where(models.Material.tax_rate == option.name)) or 0
-        if used:
-            raise HTTPException(status_code=400, detail="该税率已被物料使用，无法删除")
-    elif option.option_type == "material_attr":
-        used = db.scalar(
-            select(func.count(models.Material.id)).where(models.Material.material_name_attr == option.name)
-        ) or 0
-        if used:
-            raise HTTPException(status_code=400, detail="该材质已被物料使用，无法删除")
-    elif option.option_type == "grade":
-        used = db.scalar(select(func.count(models.Material.id)).where(models.Material.grade_attr == option.name)) or 0
-        if used:
-            raise HTTPException(status_code=400, detail="该等级已被物料使用，无法删除")
-    elif option.option_type == "product_category":
-        used = db.scalar(select(func.count(models.Product.id)).where(models.Product.product_category == option.name)) or 0
-        if used:
-            raise HTTPException(status_code=400, detail="该产品类别已被产品使用，无法删除")
-    db.delete(option)
-    db.commit()
-    return {"message": "System option deleted"}
-
+    return categories_service.hard_delete_system_option(db, option_id)
 
 # -------------------------
 # Materials
@@ -230,91 +106,22 @@ def _apply_material_type_defaults(data: dict):
 
 
 def list_materials(db: Session):
-    return db.scalars(select(models.Material).order_by(models.Material.id.desc())).all()
-
+    return materials_service.list_materials(db)
 
 def get_material(db: Session, material_id: int):
-    material = db.get(models.Material, material_id)
-    if not material:
-        raise HTTPException(status_code=404, detail="Material not found")
-    return material
-
+    return materials_service.get_material(db, material_id)
 
 def create_material(db: Session, payload: schemas.MaterialCreate):
-    data = payload.model_dump()
-    _apply_material_type_defaults(data)
-    category = data.get("category")
-    if category:
-        exists_category = db.scalar(
-            select(models.MaterialCategory).where(
-                models.MaterialCategory.name == category,
-                models.MaterialCategory.is_active.is_(True),
-            )
-        )
-        if not exists_category:
-            raise HTTPException(status_code=400, detail="Invalid material category")
-    if not data.get("code"):
-        data["code"] = _generate_material_code(db, category)
-    exists = db.scalar(select(models.Material).where(models.Material.code == data["code"]))
-    if exists:
-        raise HTTPException(status_code=400, detail="Material code already exists")
-    material = models.Material(**data)
-    db.add(material)
-    db.commit()
-    db.refresh(material)
-    return material
-
+    return materials_service.create_material(db, payload)
 
 def update_material(db: Session, material_id: int, payload: schemas.MaterialUpdate):
-    material = get_material(db, material_id)
-    data = payload.model_dump(exclude_unset=True)
-    _apply_material_type_defaults(data)
-    if "category" in data and data["category"]:
-        exists_category = db.scalar(
-            select(models.MaterialCategory).where(
-                models.MaterialCategory.name == data["category"],
-                models.MaterialCategory.is_active.is_(True),
-            )
-        )
-        if not exists_category:
-            raise HTTPException(status_code=400, detail="Invalid material category")
-    data.pop("code", None)
-    for key, value in data.items():
-        setattr(material, key, value)
-    _sync_all_bom_items_for_material(db, material)
-    db.commit()
-    db.refresh(material)
-    return material
-
+    return materials_service.update_material(db, material_id, payload)
 
 def soft_delete_material(db: Session, material_id: int):
-    material = get_material(db, material_id)
-    material.is_active = False
-    db.commit()
-    db.refresh(material)
-    return material
-
+    return materials_service.soft_delete_material(db, material_id)
 
 def hard_delete_material(db: Session, material_id: int):
-    material = get_material(db, material_id)
-    rev_count = db.scalar(
-        select(func.count(models.PartRevision.id)).where(models.PartRevision.material_id == material_id)
-    ) or 0
-    bom_item_count = db.scalar(
-        select(func.count(models.BOMItem.id)).where(models.BOMItem.material_id == material_id)
-    ) or 0
-    tx_count = db.scalar(
-        select(func.count(models.StockTransaction.id)).where(models.StockTransaction.material_id == material_id)
-    ) or 0
-    if rev_count or bom_item_count or tx_count:
-        raise HTTPException(
-            status_code=400,
-            detail="Material is referenced by revisions/BOM/inventory transactions and cannot be deleted",
-        )
-    db.delete(material)
-    db.commit()
-    return {"message": "Material deleted"}
-
+    return materials_service.hard_delete_material(db, material_id)
 
 def _generate_material_code(db: Session, category: str | None):
     prefix = "WL"

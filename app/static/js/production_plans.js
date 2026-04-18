@@ -46,7 +46,7 @@ function lineRowHtml() {
 }
 
 async function loadBoms() {
-  const res = await fetch("/boms");
+  const res = await http.fetch("/boms");
   if (!res.ok) return;
   allBoms = await res.json();
 }
@@ -120,7 +120,7 @@ function renderShortage(data) {
 }
 
 async function loadList() {
-  const res = await fetch("/production-plans");
+  const res = await http.fetch("/production-plans");
   if (!res.ok) return showMsg("加载生产计划失败", true);
   const rows = await res.json();
   const tb = document.getElementById("pp-tbody");
@@ -159,7 +159,7 @@ function resetFormNew() {
 }
 
 async function openEdit(id) {
-  const res = await fetch(`/production-plans/${id}`);
+  const res = await http.fetch(`/production-plans/${id}`);
   if (!res.ok) return showMsg("加载计划失败", true);
   const r = await res.json();
   document.getElementById("pp_id").value = String(r.id);
@@ -233,7 +233,7 @@ document.getElementById("pp_save").addEventListener("click", async () => {
   const id = document.getElementById("pp_id").value;
   const url = id ? `/production-plans/${id}` : "/production-plans";
   const method = id ? "PUT" : "POST";
-  const res = await fetch(url, {
+  const res = await http.fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -253,7 +253,7 @@ document.getElementById("pp_save").addEventListener("click", async () => {
 document.getElementById("pp_confirm").addEventListener("click", async () => {
   const id = document.getElementById("pp_id").value;
   if (!id) return showMsg("请先保存草稿", true);
-  const res = await fetch(`/production-plans/${id}`, {
+  const res = await http.fetch(`/production-plans/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: "confirmed" }),
@@ -284,7 +284,7 @@ document.getElementById("pp-tbody").addEventListener("click", (e) => {
 
 document.getElementById("pp_calc_shortage").addEventListener("click", async () => {
   if (!currentPlanId) return showMsg("请先在列表中点「缺料/采购」选择计划", true);
-  const res = await fetch(`/production-plans/${currentPlanId}/shortage`, { method: "POST" });
+  const res = await http.fetch(`/production-plans/${currentPlanId}/shortage`, { method: "POST" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail) || "计算失败", true);
@@ -297,7 +297,7 @@ document.getElementById("pp_calc_shortage").addEventListener("click", async () =
 document.getElementById("pp_draft_pos").addEventListener("click", async () => {
   if (!currentPlanId) return showMsg("请先在列表中点「缺料/采购」选择计划", true);
   if (!confirm("将按供应商拆分生成多张「草稿」采购订单，是否继续？")) return;
-  const res = await fetch(`/production-plans/${currentPlanId}/draft-purchase-orders`, { method: "POST" });
+  const res = await http.fetch(`/production-plans/${currentPlanId}/draft-purchase-orders`, { method: "POST" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail) || "生成失败", true);

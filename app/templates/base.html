@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ page_title }} - ERP_W</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/static/js/api/http.js?v=20260418-2"></script>
+  <script src="/static/js/store/appStore.js?v=20260418-2"></script>
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar" id="app-sidebar">
       <div class="sidebar-header">
-        <a href="/ui" class="sidebar-brand" title="ERP_W">
+        <a href="/ui/materials" class="sidebar-brand" title="ERP_W">
           <span class="sidebar-brand-text menu-text">ERP_W</span>
         </a>
         <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="切换侧栏" aria-expanded="true">
@@ -18,7 +20,7 @@
         </button>
       </div>
       <nav class="sidebar-nav">
-        {% set materials_menu_open = request.url.path in ['/ui', '/ui/dashboard', '/inventory', '/inventory/', '/ui/materials', '/ui/nonstandard-materials', '/ui/revisions', '/ui/categories'] or (request.url.path.startswith('/ui/materials/') and '/revisions' in request.url.path) %}
+        {% set materials_menu_open = request.url.path in ['/ui', '/ui/dashboard', '/ui/materials', '/ui/nonstandard-materials', '/ui/revisions', '/ui/categories'] or (request.url.path.startswith('/ui/materials/') and '/revisions' in request.url.path) %}
         <details class="sidebar-group"{% if materials_menu_open %} open{% endif %}>
           <summary class="sidebar-group-summary menu-item" data-title="物料" title="物料">
             <span class="nav-main">
@@ -28,7 +30,7 @@
             <span class="nav-caret" aria-hidden="true"></span>
           </summary>
           <div class="sidebar-subnav">
-            <a href="/inventory" class="{% if request.url.path in ['/ui', '/ui/dashboard', '/inventory', '/inventory/', '/ui/materials'] or (request.url.path.startswith('/ui/materials/') and '/revisions' in request.url.path) %}active{% endif %}" title="物料列表">
+            <a href="/ui/materials" class="{% if request.url.path in ['/ui', '/ui/dashboard', '/ui/materials'] or (request.url.path.startswith('/ui/materials/') and '/revisions' in request.url.path) %}active{% endif %}" title="物料列表">
               <span class="nav-icon"><i data-lucide="list"></i></span>
               <span class="nav-label menu-text">物料列表</span>
             </a>
@@ -46,22 +48,23 @@
             </a>
           </div>
         </details>
-        {% set product_open = '/ui/self-products' in request.url.path or '/pcba' in request.url.path or '/designs' in request.url.path or '/ui/purchased-products' in request.url.path or '/ui/boms' in request.url.path %}
+
+        {% set product_open = '/ui/self-products' in request.url.path or '/ui/purchased-products' in request.url.path or '/ui/boms' in request.url.path %}
         <details class="sidebar-group"{% if product_open %} open{% endif %}>
-          <summary class="sidebar-group-summary menu-item" data-title="板卡管理" title="板卡管理">
+          <summary class="sidebar-group-summary menu-item" data-title="产品" title="产品">
             <span class="nav-main">
               <span class="nav-icon"><i data-lucide="circuit-board"></i></span>
-              <span class="nav-label menu-text">板卡管理</span>
+              <span class="nav-label menu-text">产品</span>
             </span>
             <span class="nav-caret" aria-hidden="true"></span>
           </summary>
           <div class="sidebar-subnav">
-            <a href="/pcba" class="{% if request.url.path in ['/pcba', '/pcba/', '/designs', '/designs/', '/ui/self-products'] %}active{% endif %}" title="自制板卡">
+            <a href="/ui/self-products" class="{% if request.url.path == '/ui/self-products' %}active{% endif %}" title="自制板卡">
               <span class="nav-icon"><i data-lucide="microchip"></i></span>
               <span class="nav-label menu-text">自制板卡</span>
             </a>
             <a href="/ui/purchased-products" class="{% if request.url.path == '/ui/purchased-products' %}active{% endif %}" title="外购模块 / 整机">
-              <span class="nav-icon"><i data-lucide="package"></i></span>
+              <span class="nav-icon"><i data-lucide="package-plus"></i></span>
               <span class="nav-label menu-text">外购模块 / 整机</span>
             </a>
             <a href="/ui/boms" class="{% if '/ui/boms' in request.url.path %}active{% endif %}" title="项目 BOM">
@@ -70,44 +73,23 @@
             </a>
           </div>
         </details>
-        {% set production_open = '/ui/production-plans' in request.url.path %}
-        <details class="sidebar-group"{% if production_open %} open{% endif %}>
-          <summary class="sidebar-group-summary menu-item" data-title="生产管理" title="生产管理">
-            <span class="nav-main">
-              <span class="nav-icon"><i data-lucide="factory"></i></span>
-              <span class="nav-label menu-text">生产管理</span>
-            </span>
-            <span class="nav-caret" aria-hidden="true"></span>
-          </summary>
-          <div class="sidebar-subnav">
-            <a href="/ui/production-plans" class="{% if request.url.path == '/ui/production-plans' %}active{% endif %}" title="生产计划">
-              <span class="nav-icon"><i data-lucide="calendar"></i></span>
-              <span class="nav-label menu-text">生产计划</span>
-            </a>
-          </div>
-        </details>
-        {% set sales_open = '/ui/sales-orders' in request.url.path %}
-        <details class="sidebar-group"{% if sales_open %} open{% endif %}>
-          <summary class="sidebar-group-summary menu-item" data-title="销售管理" title="销售管理">
-            <span class="nav-main">
-              <span class="nav-icon"><i data-lucide="banknote"></i></span>
-              <span class="nav-label menu-text">销售管理</span>
-            </span>
-            <span class="nav-caret" aria-hidden="true"></span>
-          </summary>
-          <div class="sidebar-subnav">
-            <a href="/ui/sales-orders" class="{% if request.url.path == '/ui/sales-orders' %}active{% endif %}" title="销售订单">
-              <span class="nav-icon"><i data-lucide="clipboard-list"></i></span>
-              <span class="nav-label menu-text">销售订单</span>
-            </a>
-          </div>
-        </details>
+
+        <a href="/ui/production-plans" class="sidebar-link menu-item {% if request.url.path == '/ui/production-plans' %}active{% endif %}" data-title="生产计划" title="生产计划">
+          <span class="nav-icon"><i data-lucide="factory"></i></span>
+          <span class="nav-label menu-text">生产计划</span>
+        </a>
+
+        <a href="/ui/sales-orders" class="sidebar-link menu-item {% if request.url.path == '/ui/sales-orders' %}active{% endif %}" data-title="销售订单" title="销售订单">
+          <span class="nav-icon"><i data-lucide="banknote"></i></span>
+          <span class="nav-label menu-text">销售订单</span>
+        </a>
+
         {% set purchase_open = '/ui/purchase-orders' in request.url.path or '/ui/purchase-receipts' in request.url.path or '/ui/purchase-invoices' in request.url.path or '/ui/inquiries' in request.url.path or '/ui/procurement' in request.url.path or '/ui/suppliers' in request.url.path %}
         <details class="sidebar-group"{% if purchase_open %} open{% endif %}>
-          <summary class="sidebar-group-summary menu-item" data-title="采购管理" title="采购管理">
+          <summary class="sidebar-group-summary menu-item" data-title="采购" title="采购">
             <span class="nav-main">
               <span class="nav-icon"><i data-lucide="shopping-cart"></i></span>
-              <span class="nav-label menu-text">采购管理</span>
+              <span class="nav-label menu-text">采购</span>
             </span>
             <span class="nav-caret" aria-hidden="true"></span>
           </summary>
@@ -138,10 +120,12 @@
             </a>
           </div>
         </details>
+
         <a href="/ui/inventory" class="sidebar-link menu-item {% if '/ui/inventory' in request.url.path %}active{% endif %}" data-title="库存记录" title="库存记录">
           <span class="nav-icon"><i data-lucide="database"></i></span>
           <span class="nav-label menu-text">库存记录</span>
         </a>
+
         {% set settings_open = '/ui/settings' in request.url.path %}
         <details class="sidebar-group"{% if settings_open %} open{% endif %}>
           <summary class="sidebar-group-summary menu-item" data-title="设置" title="设置">
@@ -162,6 +146,7 @@
             </a>
           </div>
         </details>
+
         <a href="/ui/tutorial" class="sidebar-link menu-item {% if '/ui/tutorial' in request.url.path %}active{% endif %}" data-title="使用教程" title="使用教程">
           <span class="nav-icon"><i data-lucide="book-open"></i></span>
           <span class="nav-label menu-text">使用教程</span>
@@ -200,6 +185,7 @@
     </main>
   </div>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="/static/js/layout.js"></script>
+  {% block page_scripts %}{% endblock %}
+  <script src="/static/js/layout.js?v=20260418-2"></script>
 </body>
 </html>

@@ -75,21 +75,20 @@ function renderTable() {
 
 async function loadProducts() {
   const mode = getViewMode();
-  const res = await fetch(`/products?product_type=${encodeURIComponent(mode)}`);
+  const res = await http.fetch(`/products?product_type=${encodeURIComponent(mode)}`);
   allProducts = await res.json();
   renderTable();
 }
 
 async function loadProductCategories() {
-  const res = await fetch("/system-options?option_type=product_category");
-  const rows = await res.json();
-  productCategories = rows.filter(x => x.is_active);
+  const basic = await appStore.initBasicData(["systemOptions"]);
+  productCategories = (basic.systemOptions || []).filter(x => x.option_type === "product_category" && x.is_active);
   renderCategoryFilter();
 }
 
 async function loadMaterials() {
-  const res = await fetch("/materials");
-  allMaterials = await res.json();
+  const basic = await appStore.initBasicData(["materials"]);
+  allMaterials = basic.materials || [];
   renderMaterialOptions();
 }
 
@@ -156,7 +155,7 @@ window.saveProduct = async function saveProduct() {
   if (product_type === "purchased" && !payload.linked_material_id) return showMsg("外购品请关联物料", true);
   const url = id ? `/products/${id}` : "/products";
   const method = id ? "PUT" : "POST";
-  const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const res = await http.fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(e.detail || "保存失败", true);
@@ -173,7 +172,7 @@ Promise.all([loadProductCategories(), loadMaterials()]).then(loadProducts);
 
 window.deleteProduct = async function deleteProduct(id) {
   if (!confirm("确认删除该产品？")) return;
-  const res = await fetch(`/products/${id}`, { method: "DELETE" });
+  const res = await http.fetch(`/products/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(e.detail || "删除失败", true);

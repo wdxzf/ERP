@@ -29,13 +29,16 @@
     <a class="btn primary" href="/ui/materials">新增 / 管理元件</a>
     <a class="btn" href="/ui/categories">编辑分类与常用选项</a>
     <a class="btn" href="/ui/procurement">查看补货建议</a>
-    <a class="btn" href="/export/dashboard">导出当前指标</a>
+    <a class="btn" href="/api/export/dashboard">导出当前指标</a>
   </div>
 </div>
 
+{% endblock %}
+
+{% block page_scripts %}
 <script>
 async function loadStats() {
-  const res = await fetch('/ui/api/dashboard-stats');
+  const res = await http.fetch('/api/dashboard-stats');
   const data = await res.json();
   Object.keys(data).forEach(k => {
     const el = document.getElementById('s_' + k);

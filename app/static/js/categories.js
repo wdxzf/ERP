@@ -1,16 +1,8 @@
-const catMsg = (m, err = false) => {
-  const el = document.getElementById("msg");
-  if (!m) {
-    el.textContent = "";
-    el.className = "msg hidden";
-    return;
-  }
-  el.textContent = m;
-  el.className = err ? "msg err" : "msg ok";
-};
+const PAGE_SIZE = 10;
+
 let allCategories = [];
 let currentPage = 1;
-const PAGE_SIZE = 10;
+
 const typeSelect = () => document.getElementById("c_type");
 const isCategoryType = () => typeSelect().value === "category";
 
@@ -23,8 +15,15 @@ const typeMetaMap = {
   product_category: { label: "产品分类", title: "产品分类列表" },
 };
 
-function getTypeMeta() {
-  return typeMetaMap[typeSelect().value] || { label: "名称", title: "分类列表" };
+function catMsg(message, err = false) {
+  const el = document.getElementById("msg");
+  if (!message) {
+    el.textContent = "";
+    el.className = "msg";
+    return;
+  }
+  el.textContent = message;
+  el.className = `msg ${err ? "err" : "ok"}`;
 }
 
 function escapeHtml(value) {
@@ -36,9 +35,18 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function refreshIcons() {
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
+}
+
+function getTypeMeta() {
+  return typeMetaMap[typeSelect().value] || { label: "名称", title: "分类列表" };
+}
+
 function isSystemRemark(remark) {
-  const text = String(remark || "").trim();
-  return text.startsWith("默认");
+  return String(remark || "").trim().startsWith("默认");
 }
 
 function renderRemarkCell(remark) {
@@ -48,6 +56,15 @@ function renderRemarkCell(remark) {
     return `<span class="auto-remark">${escapeHtml(text)}</span>`;
   }
   return escapeHtml(text);
+}
+
+function setTableState(message) {
+  const showPrefix = isCategoryType();
+  document.getElementById("cat-tbody").innerHTML = `<tr><td colspan="${showPrefix ? 6 : 5}" class="table-state-cell">${escapeHtml(message)}</td></tr>`;
+  const mobileList = document.getElementById("categories-mobile-list");
+  if (mobileList) {
+    mobileList.innerHTML = `<div class="mobile-state-card">${escapeHtml(message)}</div>`;
+  }
 }
 
 function setPage(page, totalPages) {
@@ -79,33 +96,116 @@ function renderPagination(totalRows) {
   return { startIndex: (currentPage - 1) * PAGE_SIZE, endIndex: currentPage * PAGE_SIZE };
 }
 
+function renderStatusTagCell(category) {
+  return `<button type="button" class="status-toggle ${category.is_active ? "is-active" : "is-inactive"}" onclick="toggleCategoryActive(${category.id}, ${category.is_active ? "false" : "true"})">
+    ${category.is_active ? "启用" : "停用"}
+  </button>`;
+}
+
+function renderActionCell(category) {
+  return `<div class="table-actions icon-actions">
+    <button class="btn icon-btn" onclick="editCategoryById(${category.id})" aria-label="编辑 ${escapeHtml(category.name)}" title="编辑">
+      <i data-lucide="square-pen"></i>
+    </button>
+    <button class="btn icon-btn danger" onclick="deleteCategory(${category.id})" aria-label="删除 ${escapeHtml(category.name)}" title="删除">
+      <i data-lucide="trash-2"></i>
+    </button>
+  </div>`;
+}
+
+function renderTypeSummary(rows) {
+  const typeMeta = getTypeMeta();
+  const activeCount = rows.filter((item) => item.is_active).length;
+  const inactiveCount = rows.length - activeCount;
+
+  const badge = document.getElementById("cat-type-badge");
+  if (badge) badge.textContent = typeMeta.label;
+
+  const totalEl = document.getElementById("cat-total-stat");
+  const activeEl = document.getElementById("cat-active-stat");
+  const inactiveEl = document.getElementById("cat-inactive-stat");
+  if (totalEl) totalEl.textContent = String(rows.length);
+  if (activeEl) activeEl.textContent = String(activeCount);
+  if (inactiveEl) inactiveEl.textContent = String(inactiveCount);
+}
+
+function renderMobileCards(rows, visibleRows) {
+  const mobileList = document.getElementById("categories-mobile-list");
+  if (!mobileList) return;
+
+  if (!visibleRows.length) {
+    mobileList.innerHTML = `<div class="mobile-state-card">暂无匹配数据</div>`;
+    return;
+  }
+
+  mobileList.innerHTML = visibleRows
+    .map((item) => `
+      <article class="mobile-entity-card">
+        <div class="mobile-entity-head">
+          <div>
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>${escapeHtml(getTypeMeta().label)}</p>
+          </div>
+          <div class="mobile-entity-tags">
+            <span class="mobile-status-pill ${item.is_active ? "" : "is-muted"}">${item.is_active ? "启用" : "停用"}</span>
+          </div>
+        </div>
+        <dl class="mobile-entity-meta">
+          ${isCategoryType() ? `<div><dt>编码前缀</dt><dd>${escapeHtml(item.code_prefix || "-")}</dd></div>` : ""}
+          <div><dt>排序</dt><dd>${escapeHtml(item.sort_order)}</dd></div>
+          <div><dt>备注</dt><dd>${renderRemarkCell(item.remark)}</dd></div>
+        </dl>
+        <div class="mobile-entity-actions">
+          <button type="button" class="btn" onclick="editCategoryById(${item.id})">编辑</button>
+          <button type="button" class="btn" onclick="toggleCategoryActive(${item.id}, ${item.is_active ? "false" : "true"})">${item.is_active ? "停用" : "启用"}</button>
+          <button type="button" class="btn danger" onclick="deleteCategory(${item.id})">删除</button>
+        </div>
+      </article>
+    `)
+    .join("");
+}
+
 function renderCategories() {
   const keyword = (document.getElementById("c_name").value || "").toLowerCase();
-  const rows = allCategories.filter(c => !keyword || (c.name || "").toLowerCase().includes(keyword));
+  const rows = allCategories.filter((item) => !keyword || (item.name || "").toLowerCase().includes(keyword));
   const showPrefix = isCategoryType();
   const page = renderPagination(rows.length);
   const visibleRows = rows.slice(page.startIndex, page.endIndex);
-  const emptyMarkup = `<tr><td colspan="${showPrefix ? 6 : 5}" class="muted-note">暂无匹配数据</td></tr>`;
-  document.getElementById("cat-tbody").innerHTML = visibleRows.length ? visibleRows.map(c => `<tr>
-    <td>${escapeHtml(c.name)}</td>${showPrefix ? `<td>${escapeHtml(c.code_prefix || "")}</td>` : ""}<td>${escapeHtml(c.sort_order)}</td>
-    <td>${renderStatusTagCell(c)}</td>
-    <td>${renderRemarkCell(c.remark)}</td>
-    <td>
-      <div class="table-actions">
-        <button class="btn sm" onclick="editCategoryById(${c.id})" aria-label="编辑 ${escapeHtml(c.name)}">✏ 编辑</button>
-        <button class="btn sm danger" onclick='deleteCategory(${c.id})' aria-label="删除 ${escapeHtml(c.name)}">🗑 删除</button>
-      </div>
-    </td>
-  </tr>`).join("") : emptyMarkup;
-  const tot = document.getElementById("cat-record-total");
-  if (tot) tot.textContent = `共 ${rows.length} 条`;
+  renderTypeSummary(rows);
+
+  if (!visibleRows.length) {
+    setTableState("暂无匹配数据");
+  } else {
+    document.getElementById("cat-tbody").innerHTML = visibleRows
+      .map((item) => `<tr>
+        <td>${escapeHtml(item.name)}</td>
+        ${showPrefix ? `<td>${escapeHtml(item.code_prefix || "")}</td>` : ""}
+        <td>${escapeHtml(item.sort_order)}</td>
+        <td>${renderStatusTagCell(item)}</td>
+        <td>${renderRemarkCell(item.remark)}</td>
+        <td>${renderActionCell(item)}</td>
+      </tr>`)
+      .join("");
+  }
+
+  renderMobileCards(rows, visibleRows);
+  const total = document.getElementById("cat-record-total");
+  if (total) total.textContent = `共 ${rows.length} 条`;
+  refreshIcons();
 }
 
-async function loadCategories() {
-  const t = typeSelect().value;
-  const url = t === "category" ? "/material-categories" : `/system-options?option_type=${encodeURIComponent(t)}`;
-  const res = await fetch(url);
-  allCategories = await res.json();
+async function loadCategories(force = false) {
+  setTableState("加载中...");
+  const type = typeSelect().value;
+
+  if (type === "category") {
+    const basic = await appStore.initBasicData(["materialCategories"], { force });
+    allCategories = basic.materialCategories || [];
+  } else {
+    const basic = await appStore.initBasicData(["systemOptions"], { force });
+    allCategories = (basic.systemOptions || []).filter((item) => item.option_type === type);
+  }
+
   renderCategories();
 }
 
@@ -113,32 +213,33 @@ function openCategoryModal() {
   document.getElementById("cat-modal").classList.remove("hidden");
   document.getElementById("cat-title").textContent = "新增类别";
 }
+
 function closeCategoryModal() {
   document.getElementById("cat-modal").classList.add("hidden");
   document.getElementById("cat-form").reset();
   document.getElementById("ct_id").value = "";
 }
-function editCategory(c) {
+
+function editCategory(category) {
   openCategoryModal();
   document.getElementById("cat-title").textContent = "编辑类别";
-  ["id", "name", "code_prefix", "sort_order", "remark"].forEach(k => {
-    const el = document.getElementById("ct_" + k);
-    if (el) el.value = c[k] ?? "";
+  ["id", "name", "code_prefix", "sort_order", "remark"].forEach((key) => {
+    const el = document.getElementById(`ct_${key}`);
+    if (el) el.value = category[key] ?? "";
   });
-  document.getElementById("ct_is_active").value = c.is_active ? "true" : "false";
+  document.getElementById("ct_is_active").value = category.is_active ? "true" : "false";
 }
 
 function editCategoryById(id) {
-  const category = allCategories.find(item => item.id === id);
+  const category = allCategories.find((item) => item.id === id);
   if (!category) return;
   editCategory(category);
 }
 
-function renderStatusTagCell(category) {
-  return `<button type="button" class="status-toggle ${category.is_active ? "is-active" : "is-inactive"}" onclick="toggleCategoryActive(${category.id}, ${category.is_active ? "false" : "true"})">
-    ${category.is_active ? "启用" : "停用"}
-  </button>`;
+function invalidateCurrentTypeCache() {
+  appStore.invalidate(isCategoryType() ? "materialCategories" : "systemOptions");
 }
+
 async function saveCategory() {
   const id = document.getElementById("ct_id").value;
   const base = {
@@ -147,76 +248,78 @@ async function saveCategory() {
     is_active: ct_is_active.value === "true",
     remark: ct_remark.value || null,
   };
+
   let payload = base;
   let url = "";
   if (isCategoryType()) {
-    payload = {...base, code_prefix: ct_code_prefix.value};
+    payload = { ...base, code_prefix: ct_code_prefix.value };
     if (!payload.code_prefix) return catMsg("分类必须填写编码前缀", true);
     url = id ? `/material-categories/${id}` : "/material-categories";
   } else {
-    payload = {...base, option_type: typeSelect().value};
+    payload = { ...base, option_type: typeSelect().value };
     url = id ? `/system-options/${id}` : "/system-options";
   }
-  const method = id ? "PUT" : "POST";
-  const res = await fetch(url, { method, headers: {"Content-Type":"application/json"}, body: JSON.stringify(payload) });
-  if (!res.ok) {
-    const e = await res.json();
-    return catMsg(e.detail || "保存失败", true);
+
+  try {
+    await http.request(url, {
+      method: id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    invalidateCurrentTypeCache();
+    catMsg("保存成功");
+    closeCategoryModal();
+    await loadCategories(true);
+  } catch (error) {
+    catMsg(error.message || "保存失败", true);
   }
-  catMsg("保存成功");
-  closeCategoryModal();
-  loadCategories();
 }
 
 async function deleteCategory(id) {
   if (!confirm("确认删除该项？")) return;
-  let url = "";
-  if (isCategoryType()) {
-    url = `/material-categories/${id}/hard-delete`;
-  } else {
-    url = `/system-options/${id}/hard-delete`;
+  const url = isCategoryType() ? `/material-categories/${id}/hard-delete` : `/system-options/${id}/hard-delete`;
+  try {
+    await http.request(url, { method: "DELETE" });
+    invalidateCurrentTypeCache();
+    catMsg("删除成功");
+    await loadCategories(true);
+  } catch (error) {
+    catMsg(error.message || "删除失败", true);
   }
-  const res = await fetch(url, { method: "DELETE" });
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    return catMsg(e.detail || "删除失败", true);
-  }
-  catMsg("删除成功");
-  loadCategories();
 }
 
 async function toggleCategoryActive(id, nextState) {
-  const matched = allCategories.find(item => item.id === id);
-  if (!matched) return;
-  const payload = { is_active: nextState };
   const url = isCategoryType() ? `/material-categories/${id}` : `/system-options/${id}`;
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    return catMsg(e.detail || "状态更新失败", true);
+  const isNextActive = nextState === true || nextState === "true";
+  try {
+    await http.request(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: isNextActive }),
+    });
+    invalidateCurrentTypeCache();
+    catMsg(isNextActive ? "已启用" : "已停用");
+    await loadCategories(true);
+  } catch (error) {
+    catMsg(error.message || "状态更新失败", true);
   }
-  catMsg(nextState ? "已启用" : "已停用");
-  loadCategories();
 }
 
 function onTypeChanged() {
   const showPrefix = isCategoryType();
   document.getElementById("label-prefix").style.display = showPrefix ? "" : "none";
   document.getElementById("th-prefix").style.display = showPrefix ? "" : "none";
+
   const typeMeta = getTypeMeta();
-  const nm = document.getElementById("c_name");
-  if (nm) nm.placeholder = `按${typeMeta.label}搜索`;
+  const keyword = document.getElementById("c_name");
+  if (keyword) keyword.placeholder = `按${typeMeta.label}搜索`;
   const title = document.getElementById("cat-table-title");
   if (title) title.textContent = typeMeta.title;
+
   currentPage = 1;
   loadCategories();
 }
 
-// Explicit binding avoids relying on inline handlers only.
 document.getElementById("c_type").addEventListener("change", onTypeChanged);
 document.getElementById("c_name").addEventListener("input", () => {
   currentPage = 1;
@@ -231,7 +334,6 @@ document.getElementById("cat-next-page").addEventListener("click", () => {
   renderCategories();
 });
 
-// Expose handlers for inline onclick/onchange attributes in template.
 window.onTypeChanged = onTypeChanged;
 window.openCategoryModal = openCategoryModal;
 window.closeCategoryModal = closeCategoryModal;
@@ -241,4 +343,5 @@ window.editCategoryById = editCategoryById;
 window.deleteCategory = deleteCategory;
 window.toggleCategoryActive = toggleCategoryActive;
 
+setTableState("加载中...");
 onTypeChanged();

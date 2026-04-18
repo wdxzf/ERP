@@ -119,20 +119,20 @@ function collectLines() {
 }
 
 async function loadInquiries() {
-  const res = await fetch("/inquiries");
+  const res = await http.fetch("/inquiries");
   const rows = await res.json();
   document.getElementById("inq_tbody").innerHTML = rows.map(r => `<tr>
     <td>${escAttr(r.inquiry_no)}</td><td>${isoDateOnly(r.inquiry_date)}</td><td>${escAttr(r.supplier_company || "")}</td><td>${escAttr(r.status)}</td><td>—</td>
-    <td><button class="btn sm" data-edit="${r.id}">编辑</button> <a class="btn sm" href="/export/inquiry/${r.id}" target="_blank">导出Excel</a></td>
+    <td><button class="btn sm" data-edit="${r.id}">编辑</button> <a class="btn sm" href="/api/export/inquiry/${r.id}" target="_blank">导出Excel</a></td>
   </tr>`).join("");
   document.getElementById("inq_total").textContent = `共 ${rows.length} 条`;
 }
 
 async function loadBasics() {
-  const [spRes, mRes, cRes] = await Promise.all([fetch("/suppliers"), fetch("/materials"), fetch("/material-categories")]);
-  allSuppliers = await spRes.json();
-  allMaterials = await mRes.json();
-  allCategories = (await cRes.json()).filter(x => x.is_active);
+  const basic = await appStore.initBasicData(["suppliers", "materials", "materialCategories"]);
+  allSuppliers = basic.suppliers || [];
+  allMaterials = basic.materials || [];
+  allCategories = (basic.materialCategories || []).filter(x => x.is_active);
   renderSupplierOptions(document.getElementById("iq_supplier_company")?.value || "");
   renderCategoryFilter();
   renderMaterialTable();
@@ -154,13 +154,11 @@ async function resetForm(useCompanyDefaults = false) {
   document.getElementById("iq_lines_tbody").innerHTML = "";
   if (useCompanyDefaults) {
     try {
-      const res = await fetch("/company-profile");
-      if (res.ok) {
-        const p = await res.json();
-        document.getElementById("iq_delivery_address").value = (p.address || "").trim();
-        document.getElementById("iq_supplier_contact").value = (p.contact_person || "").trim();
-        document.getElementById("iq_supplier_phone").value = (p.phone || "").trim();
-      }
+      const basic = await appStore.initBasicData(["companyProfile"]);
+      const p = basic.companyProfile || {};
+      document.getElementById("iq_delivery_address").value = (p.address || "").trim();
+      document.getElementById("iq_supplier_contact").value = (p.contact_person || "").trim();
+      document.getElementById("iq_supplier_phone").value = (p.phone || "").trim();
     } catch (_) {}
   }
 }
@@ -203,7 +201,7 @@ document.getElementById("iq_lines_tbody").addEventListener("click", (e) => {
 document.getElementById("inq_tbody").addEventListener("click", async (e) => {
   const id = e.target.getAttribute("data-edit");
   if (!id) return;
-  const res = await fetch(`/inquiries/${id}`);
+  const res = await http.fetch(`/inquiries/${id}`);
   const r = await res.json();
   await resetForm(false);
   document.getElementById("iq_id").value = String(r.id);
@@ -238,7 +236,7 @@ document.getElementById("iq_save").addEventListener("click", async () => {
     header_remark: document.getElementById("iq_header_remark").value || null,
     lines,
   };
-  const res = await fetch(id ? `/inquiries/${id}` : "/inquiries", {
+  const res = await http.fetch(id ? `/inquiries/${id}` : "/inquiries", {
     method: id ? "PUT" : "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(payload),

@@ -111,7 +111,7 @@ function closeReceiptModal() {
 }
 
 async function loadOrderTable() {
-  const res = await fetch("/purchase-orders");
+  const res = await http.fetch("/purchase-orders");
   if (!res.ok) return showMsg("加载订单列表失败", true);
   allOrders = await res.json();
   const sorted = [...allOrders].sort((a, b) => b.id - a.id);
@@ -166,7 +166,7 @@ document.getElementById("pr_order_tbody").addEventListener("click", async (e) =>
   if (!btn) return;
   const id = btn.getAttribute("data-id");
   if (!id) return;
-  const res = await fetch(`/purchase-orders/${id}`);
+  const res = await http.fetch(`/purchase-orders/${id}`);
   if (!res.ok) return showMsg("加载订单失败", true);
   const po = await res.json();
   if (po.status === "draft") return showMsg("草稿订单不能入库，请先在采购订单页改为「已发送供方」等", true);
@@ -188,7 +188,7 @@ document.getElementById("pr_submit").addEventListener("click", async () => {
     if (q > 0) lines.push({ line_id: Number(lid), qty: q });
   });
   if (!lines.length) return showMsg("请至少在一行填写大于 0 的本次入库数量", true);
-  const res = await fetch(`/purchase-orders/${id}/receive`, {
+  const res = await http.fetch(`/purchase-orders/${id}/receive`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ lines }),

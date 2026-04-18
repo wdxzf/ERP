@@ -9,6 +9,7 @@ from app import models
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/ui", tags=["ui"])
+api_router = APIRouter(tags=["ui-api"])
 
 
 def _render(request: Request, template_name: str, page_title: str, **kwargs):
@@ -150,6 +151,7 @@ def tutorial_page(request: Request):
 
 
 @router.get("/api/dashboard-stats")
+@api_router.get("/dashboard-stats")
 def dashboard_stats(db: Session = Depends(get_db)):
     total_materials = db.scalar(select(func.count(models.Material.id))) or 0
     standard_count = db.scalar(

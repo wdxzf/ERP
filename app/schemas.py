@@ -4,72 +4,17 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models import PartType, ProductType, StatusType, TransactionType
-
-
-class MaterialBase(BaseModel):
-    code: str | None = None
-    name: str
-    spec: str | None = None
-    material_type: str | None = None
-    package_name: str | None = None
-    storage_location: str | None = None
-    unit: str | None = None
-    category: str | None = None
-    part_type: PartType = PartType.standard
-    default_supplier: str | None = None
-    tax_rate: str | None = None
-    unit_price: Decimal = Decimal("0")
-    safety_stock: Decimal = Decimal("0")
-    current_stock: Decimal = Decimal("0")
-    usage: str | None = None
-    material_name_attr: str | None = None
-    standard_attr: str | None = None
-    grade_attr: str | None = None
-    purchase_link: str | None = None
-    remark: str | None = None
-    current_revision: str | None = None
-    status: StatusType = StatusType.draft
-    drawing_no: str | None = None
-    is_active: bool = True
-
-
-class MaterialCreate(MaterialBase):
-    pass
-
-
-class MaterialUpdate(BaseModel):
-    name: str | None = None
-    spec: str | None = None
-    material_type: str | None = None
-    package_name: str | None = None
-    storage_location: str | None = None
-    unit: str | None = None
-    category: str | None = None
-    part_type: PartType | None = None
-    default_supplier: str | None = None
-    tax_rate: str | None = None
-    unit_price: Decimal | None = None
-    safety_stock: Decimal | None = None
-    current_stock: Decimal | None = None
-    usage: str | None = None
-    material_name_attr: str | None = None
-    standard_attr: str | None = None
-    grade_attr: str | None = None
-    purchase_link: str | None = None
-    remark: str | None = None
-    current_revision: str | None = None
-    status: StatusType | None = None
-    drawing_no: str | None = None
-    is_active: bool | None = None
-
-
-class MaterialRead(MaterialBase):
-    code: str
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
+from app.modules.categories.schema import (
+    MaterialCategoryBase,
+    MaterialCategoryCreate,
+    MaterialCategoryRead,
+    MaterialCategoryUpdate,
+    SystemOptionBase,
+    SystemOptionCreate,
+    SystemOptionRead,
+    SystemOptionUpdate,
+)
+from app.modules.materials.schema import MaterialBase, MaterialCreate, MaterialRead, MaterialUpdate
 
 
 class MaterialImportErrorItem(BaseModel):
@@ -83,59 +28,6 @@ class MaterialImportSummary(BaseModel):
     errors: list[MaterialImportErrorItem]
 
 
-class MaterialCategoryBase(BaseModel):
-    name: str
-    code_prefix: str
-    sort_order: int = 0
-    is_active: bool = True
-    remark: str | None = None
-
-
-class MaterialCategoryCreate(MaterialCategoryBase):
-    pass
-
-
-class MaterialCategoryUpdate(BaseModel):
-    name: str | None = None
-    code_prefix: str | None = None
-    sort_order: int | None = None
-    is_active: bool | None = None
-    remark: str | None = None
-
-
-class MaterialCategoryRead(MaterialCategoryBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class SystemOptionBase(BaseModel):
-    option_type: str
-    name: str
-    sort_order: int = 0
-    is_active: bool = True
-    remark: str | None = None
-
-
-class SystemOptionCreate(SystemOptionBase):
-    pass
-
-
-class SystemOptionUpdate(BaseModel):
-    name: str | None = None
-    sort_order: int | None = None
-    is_active: bool | None = None
-    remark: str | None = None
-
-
-class SystemOptionRead(SystemOptionBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class RevisionBase(BaseModel):

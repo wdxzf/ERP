@@ -6,7 +6,7 @@
 <div class="card" id="bom-header-card"></div>
 <div class="card">
   <div class="filters">
-    <a class="btn" href="/export/bom/{{ bom_id }}">导出 Excel</a>
+    <a class="btn" href="/api/export/bom/{{ bom_id }}">导出 Excel</a>
     <button class="btn primary" onclick="openBomItemModal()">新增 BOM 明细</button>
     <span>总成本：<b id="total-cost">0</b></span>
     <span id="bom-items-total" class="list-total-edge">共 0 条记录</span>
@@ -63,5 +63,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block page_scripts %}
 <script src="/static/js/boms.js"></script>
 {% endblock %}

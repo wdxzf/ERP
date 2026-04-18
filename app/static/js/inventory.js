@@ -1,47 +1,74 @@
-const invMsg = (m, err = false) => {
-  const el = document.getElementById("msg");
-  el.textContent = m;
-  el.className = err ? "msg err" : "msg ok";
-};
 const typeMap = { in: "入库", out: "出库", adjust: "调整" };
-const fmt3 = (v) => (v === null || v === undefined || v === "" ? "" : Number.isFinite(Number(v)) ? Number(v).toFixed(3) : String(v));
 
 let materialMap = new Map();
 
-async function loadMaterialsOptions() {
-  const mats = await (await fetch("/materials")).json();
-  materialMap = new Map(mats.map(m => [m.id, m]));
-  const sel = document.getElementById("t_material_id");
-  sel.innerHTML = mats.map(m => `<option value="${m.id}">${m.code} | ${m.name} | 库存:${fmt3(m.current_stock)}</option>`).join("");
+function invMsg(message, err = false) {
+  const el = document.getElementById("msg");
+  el.textContent = message || "";
+  el.className = `msg ${err ? "err" : "ok"}`;
+}
+
+function fmt3(value) {
+  return value === null || value === undefined || value === ""
+    ? ""
+    : Number.isFinite(Number(value))
+      ? Number(value).toFixed(3)
+      : String(value);
+}
+
+async function loadMaterialsOptions(force = false) {
+  const basic = await appStore.initBasicData(["materials"], { force });
+  const materials = basic.materials || [];
+  materialMap = new Map(materials.map((item) => [item.id, item]));
+  const select = document.getElementById("t_material_id");
+  select.innerHTML = materials
+    .map((item) => `<option value="${item.id}">${item.code} | ${item.name} | 库存:${fmt3(item.current_stock)}</option>`)
+    .join("");
 }
 
 async function loadTransactions() {
   const materialId = document.getElementById("i_material_id").value.trim();
   const type = document.getElementById("i_type").value;
   const url = materialId ? `/inventory/materials/${materialId}/transactions` : "/inventory/transactions";
-  const res = await fetch(url);
-  if (!res.ok) {
-    const tot = document.getElementById("tx-record-total");
-    if (tot) tot.textContent = "共 0 条记录";
-    return invMsg("加载流水失败", true);
+
+  try {
+    let rows = await http.get(url);
+    if (type) rows = rows.filter((item) => item.transaction_type === type);
+
+    const tbody = document.getElementById("tx-tbody");
+    tbody.innerHTML = rows
+      .map((item) => {
+        const material = materialMap.get(item.material_id);
+        return `<tr>
+          <td>${item.id}</td>
+          <td>${item.material_id} ${material ? `(${material.code} ${material.name})` : ""}</td>
+          <td>${typeMap[item.transaction_type] || item.transaction_type}</td>
+          <td>${fmt3(item.qty)}</td>
+          <td>${fmt3(item.unit_price)}</td>
+          <td>${item.reference_type || ""}</td>
+          <td>${item.reference_no || ""}</td>
+          <td>${item.remark || ""}</td>
+          <td>${(item.created_at || "").replace("T", " ").slice(0, 19)}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const total = document.getElementById("tx-record-total");
+    if (total) total.textContent = `共 ${rows.length} 条记录`;
+  } catch (error) {
+    const total = document.getElementById("tx-record-total");
+    if (total) total.textContent = "共 0 条记录";
+    invMsg(error.message || "加载流水失败", true);
   }
-  let rows = await res.json();
-  if (type) rows = rows.filter(r => r.transaction_type === type);
-  const tbody = document.getElementById("tx-tbody");
-  tbody.innerHTML = rows.map(r => {
-    const m = materialMap.get(r.material_id);
-    return `<tr>
-      <td>${r.id}</td><td>${r.material_id} ${m ? "(" + m.code + " " + m.name + ")" : ""}</td><td>${typeMap[r.transaction_type] || r.transaction_type}</td>
-      <td>${fmt3(r.qty)}</td><td>${fmt3(r.unit_price)}</td><td>${r.reference_type || ""}</td><td>${r.reference_no || ""}</td><td>${r.remark || ""}</td>
-      <td>${(r.created_at || "").replace("T", " ").slice(0, 19)}</td>
-    </tr>`;
-  }).join("");
-  const tot = document.getElementById("tx-record-total");
-  if (tot) tot.textContent = `共 ${rows.length} 条记录`;
 }
 
-function openTxModal() { document.getElementById("tx-modal").classList.remove("hidden"); }
-function closeTxModal() { document.getElementById("tx-modal").classList.add("hidden"); }
+function openTxModal() {
+  document.getElementById("tx-modal").classList.remove("hidden");
+}
+
+function closeTxModal() {
+  document.getElementById("tx-modal").classList.add("hidden");
+}
 
 async function saveTx() {
   const payload = {
@@ -51,21 +78,28 @@ async function saveTx() {
     unit_price: Number(t_unit_price.value || 0),
     reference_type: t_reference_type.value || null,
     reference_no: t_reference_no.value || null,
-    remark: t_remark.value || null
+    remark: t_remark.value || null,
   };
-  const res = await fetch("/inventory/transactions", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
-    const e = await res.json();
-    return invMsg(e.detail || "保存失败", true);
+
+  try {
+    await http.request("/inventory/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    appStore.invalidate("materials");
+    invMsg("库存流水新增成功");
+    closeTxModal();
+    await loadMaterialsOptions(true);
+    await loadTransactions();
+  } catch (error) {
+    invMsg(error.message || "保存失败", true);
   }
-  invMsg("库存流水新增成功");
-  closeTxModal();
-  await loadMaterialsOptions();
-  loadTransactions();
 }
+
+window.loadTransactions = loadTransactions;
+window.openTxModal = openTxModal;
+window.closeTxModal = closeTxModal;
+window.saveTx = saveTx;
 
 loadMaterialsOptions().then(loadTransactions);

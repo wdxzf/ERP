@@ -12,60 +12,88 @@ const MATERIAL_TYPE_OPTIONS = [
   "整机",
   "其他",
 ];
+const VIEW_MODE_LABELS = {
+  all: "全部物料",
+  standard: "标准物料",
+  nonstandard: "板卡 / 模块",
+};
 
 let allMaterials = [];
 let allSuppliers = [];
 let allCategories = [];
-let optionMap = { unit: [], tax_rate: [], material_attr: [], grade: [] };
+let optionMap = { unit: [], material_attr: [], grade: [] };
 
-const escapeHtml = (s) =>
-  String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-const escapeAttr = (s) =>
-  String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
-
-const escapeTextarea = (s) =>
-  String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-function normStr(v) {
-  return (v ?? "").toString().trim();
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
-function formatNumber(v) {
-  if (v === null || v === undefined || v === "") return "";
-  const n = Number(v);
-  if (!Number.isFinite(n)) return String(v);
-  if (Math.abs(n - Math.round(n)) < 0.000001) return String(Math.round(n));
-  return n.toFixed(3).replace(/\.?0+$/, "");
+function escapeAttr(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;");
 }
 
-function parseSpecDrawingInput(raw) {
-  const lines = String(raw || "")
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (!lines.length) return { spec: null, drawing_no: null };
-  return {
-    spec: lines[0] || null,
-    drawing_no: lines.slice(1).join(" / ") || null,
-  };
+function normStr(value) {
+  return String(value ?? "").trim();
 }
 
-function formatModel(material) {
-  return [normStr(material.spec), normStr(material.drawing_no)].filter(Boolean).join(" / ");
+function formatNumber(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const num = Number(value);
+  if (!Number.isFinite(num)) return String(value);
+  if (Math.abs(num - Math.round(num)) < 0.000001) return String(Math.round(num));
+  return num.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function showMsg(message, isError = false) {
+  msgBox.textContent = message || "";
+  msgBox.className = message ? `msg ${isError ? "err" : "ok"}` : "msg";
+}
+
+function refreshIcons() {
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
+}
+
+function setTableState(message, colspan = 8) {
+  tbody.innerHTML = `<tr><td colspan="${colspan}" class="table-state-cell">${escapeHtml(message)}</td></tr>`;
+  const mobileList = document.getElementById("materials-mobile-list");
+  if (mobileList) {
+    mobileList.innerHTML = `<div class="mobile-state-card">${escapeHtml(message)}</div>`;
+  }
+}
+
+function joinDisplayParts(...values) {
+  return values.map(normStr).filter(Boolean).join(" / ");
+}
+
+function getModelSpec(material) {
+  return normStr(material.model_spec) || joinDisplayParts(material.spec, material.drawing_no, material.package_name);
+}
+
+function getBrandAttr(material) {
+  return normStr(material.brand_attr) || joinDisplayParts(material.material_name_attr, material.grade_attr);
+}
+
+function getNoteText(material) {
+  return normStr(material.notes) || normStr(material.remark);
 }
 
 function getMaterialType(material) {
   return normStr(material.material_type) || "其他";
+}
+
+function getViewMode() {
+  return (document.getElementById("view_mode")?.value || "all").toLowerCase();
+}
+
+function getViewModeLabel() {
+  return VIEW_MODE_LABELS[getViewMode()] || VIEW_MODE_LABELS.all;
 }
 
 function isLowStock(material) {
@@ -75,7 +103,7 @@ function isLowStock(material) {
 }
 
 function materialMatchesViewMode(material) {
-  const mode = (document.getElementById("view_mode")?.value || "all").toLowerCase();
+  const mode = getViewMode();
   if (mode === "standard") return material.part_type === "standard";
   if (mode === "nonstandard") return material.part_type === "custom" || material.part_type === "assembly";
   return true;
@@ -84,10 +112,9 @@ function materialMatchesViewMode(material) {
 function getFilters() {
   return {
     keyword: normStr(document.getElementById("f_keyword")?.value).toLowerCase(),
-    material_type: normStr(document.getElementById("f_material_type")?.value),
+    materialType: normStr(document.getElementById("f_material_type")?.value),
     category: normStr(document.getElementById("f_category")?.value),
-    package_name: normStr(document.getElementById("f_package")?.value),
-    storage_location: normStr(document.getElementById("f_location")?.value),
+    storageLocation: normStr(document.getElementById("f_location")?.value),
   };
 }
 
@@ -95,56 +122,91 @@ function filterMaterials() {
   const filters = getFilters();
   return allMaterials.filter((material) => {
     if (!materialMatchesViewMode(material)) return false;
+
     const haystack = [
       material.code,
       material.name,
-      material.spec,
-      material.drawing_no,
-      material.material_type,
-      material.category,
-      material.package_name,
-      material.storage_location,
-      material.remark,
+      getModelSpec(material),
+      getBrandAttr(material),
+      getNoteText(material),
     ]
       .join(" ")
       .toLowerCase();
+
     return (
       (!filters.keyword || haystack.includes(filters.keyword)) &&
-      (!filters.material_type || getMaterialType(material) === filters.material_type) &&
+      (!filters.materialType || getMaterialType(material) === filters.materialType) &&
       (!filters.category || normStr(material.category) === filters.category) &&
-      (!filters.package_name || normStr(material.package_name) === filters.package_name) &&
-      (!filters.storage_location || normStr(material.storage_location) === filters.storage_location)
+      (!filters.storageLocation || normStr(material.storage_location) === filters.storageLocation)
     );
   });
+}
+
+function renderViewBadge() {
+  const badge = document.getElementById("materials-view-badge");
+  if (badge) badge.textContent = getViewModeLabel();
+}
+
+function renderFilterSummary(filters, rows) {
+  const activeLabels = [];
+  if (filters.keyword) activeLabels.push(`关键词“${filters.keyword}”`);
+  if (filters.materialType) activeLabels.push(`类型 ${filters.materialType}`);
+  if (filters.category) activeLabels.push(`分类 ${filters.category}`);
+  if (filters.storageLocation) activeLabels.push(`库位 ${filters.storageLocation}`);
+
+  const summary = document.getElementById("materials-filter-summary");
+  if (!summary) return;
+  if (!activeLabels.length) {
+    summary.textContent = `当前视图：${getViewModeLabel()}，未启用筛选`;
+    return;
+  }
+  summary.textContent = `已筛选 ${activeLabels.length} 项，匹配 ${rows.length} 条：${activeLabels.join(" / ")}`;
 }
 
 function renderSummary(rows) {
   const lowStockCount = rows.filter((item) => isLowStock(item)).length;
   const uncategorizedCount = rows.filter((item) => !normStr(item.category)).length;
-  const now = Date.now();
   const recentCount = rows.filter((item) => {
     if (!item.created_at) return false;
     const createdAt = new Date(item.created_at).getTime();
-    return Number.isFinite(createdAt) && now - createdAt <= 7 * 24 * 60 * 60 * 1000;
+    return Number.isFinite(createdAt) && Date.now() - createdAt <= 7 * 24 * 60 * 60 * 1000;
   }).length;
-  const setText = (id, value) => {
-    const element = document.getElementById(id);
-    if (element) element.textContent = value;
+
+  const mapping = {
+    m_total_count: rows.length,
+    m_low_stock_count: lowStockCount,
+    m_recent_count: recentCount,
+    m_uncategorized_count: uncategorizedCount,
   };
-  setText("m_total_count", rows.length);
-  setText("m_low_stock_count", lowStockCount);
-  setText("m_recent_count", recentCount);
-  setText("m_uncategorized_count", uncategorizedCount);
+
+  Object.entries(mapping).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = String(value);
+  });
 }
 
-function renderOptionSelect(selectId, options, placeholder) {
+function renderSelectOptions(selectId, options, placeholder) {
   const select = document.getElementById(selectId);
   if (!select) return;
-  const current = select.value;
-  select.innerHTML = `<option value="">${placeholder}</option>${(options || [])
+  const currentValue = select.value;
+  select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${(options || [])
     .map((option) => `<option value="${escapeAttr(option.name)}">${escapeHtml(option.name)}</option>`)
     .join("")}`;
-  select.value = current;
+  select.value = currentValue;
+}
+
+function renderBrandAttrSuggestions() {
+  const dataList = document.getElementById("m_brand_attr_options");
+  if (!dataList) return;
+  const values = [
+    ...optionMap.material_attr.map((item) => normStr(item.name)),
+    ...optionMap.grade.map((item) => normStr(item.name)),
+  ]
+    .filter(Boolean)
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .sort((a, b) => a.localeCompare(b, "zh-CN"));
+
+  dataList.innerHTML = values.map((value) => `<option value="${escapeAttr(value)}"></option>`).join("");
 }
 
 function renderMaterialTypeOptions() {
@@ -155,8 +217,10 @@ function renderMaterialTypeOptions() {
   const options = MATERIAL_TYPE_OPTIONS.map(
     (item) => `<option value="${escapeAttr(item)}">${escapeHtml(item)}</option>`
   ).join("");
+
   if (filterSelect) filterSelect.innerHTML = `<option value="">全部类型</option>${options}`;
   if (formSelect) formSelect.innerHTML = `<option value="">请选择物料类型</option>${options}`;
+
   if (filterSelect) filterSelect.value = filterCurrent;
   if (formSelect) formSelect.value = formCurrent || "电子元器件";
 }
@@ -169,25 +233,19 @@ function renderCategoryOptions() {
   const options = allCategories
     .map((item) => `<option value="${escapeAttr(item.name)}">${escapeHtml(item.name)}</option>`)
     .join("");
+
   if (filterSelect) filterSelect.innerHTML = `<option value="">全部分类</option>${options}`;
   if (formSelect) formSelect.innerHTML = `<option value="">请选择分类</option>${options}`;
+
   if (filterSelect) filterSelect.value = currentFilter;
   if (formSelect) formSelect.value = currentForm;
 }
 
 function renderDynamicFilterOptions() {
-  const packageSelect = document.getElementById("f_package");
   const locationSelect = document.getElementById("f_location");
-  const currentPackage = packageSelect?.value || "";
   const currentLocation = locationSelect?.value || "";
-  const packages = [...new Set(allMaterials.map((item) => normStr(item.package_name)).filter(Boolean))].sort();
   const locations = [...new Set(allMaterials.map((item) => normStr(item.storage_location)).filter(Boolean))].sort();
-  if (packageSelect) {
-    packageSelect.innerHTML = `<option value="">全部封装</option>${packages
-      .map((item) => `<option value="${escapeAttr(item)}">${escapeHtml(item)}</option>`)
-      .join("")}`;
-    packageSelect.value = currentPackage;
-  }
+
   if (locationSelect) {
     locationSelect.innerHTML = `<option value="">全部库位</option>${locations
       .map((item) => `<option value="${escapeAttr(item)}">${escapeHtml(item)}</option>`)
@@ -200,21 +258,22 @@ function refreshSupplierOptions(selected = "") {
   const category = normStr(document.getElementById("m_category")?.value);
   const supplierSelect = document.getElementById("m_default_supplier");
   if (!supplierSelect) return;
+
   const filtered = allSuppliers.filter((supplier) => {
     const categories = supplier.supplier_categories || [];
     return !category || categories.includes(category);
   });
+
   supplierSelect.innerHTML =
     `<option value="">请选择供应商</option>` +
     filtered
-      .map(
-        (supplier) =>
-          `<option value="${escapeAttr(supplier.company_name)}">${escapeHtml(supplier.company_name)}${
-            supplier.supplier_code ? `（${escapeHtml(supplier.supplier_code)}）` : ""
-          }</option>`
-      )
+      .map((supplier) => {
+        const suffix = supplier.supplier_code ? `（${escapeHtml(supplier.supplier_code)}）` : "";
+        return `<option value="${escapeAttr(supplier.company_name)}">${escapeHtml(supplier.company_name)}${suffix}</option>`;
+      })
       .join("");
-  if (selected) supplierSelect.value = selected;
+
+  supplierSelect.value = selected || "";
 }
 
 function renderStockCell(material) {
@@ -224,100 +283,134 @@ function renderStockCell(material) {
 }
 
 function renderRemarkCell(material) {
-  const remark = normStr(material.remark) || "—";
-  return `<div class="remark-cell">${escapeHtml(remark)}</div>`;
+  return `<div class="remark-cell">${escapeHtml(getNoteText(material) || "-")}</div>`;
 }
 
 function renderMaterialMetaSummary(material) {
   const parts = [
     material.category ? `分类：${material.category}` : "",
-    material.package_name ? `封装：${material.package_name}` : "",
     material.storage_location ? `库位：${material.storage_location}` : "",
+    !material.is_active ? "已停用" : "",
   ].filter(Boolean);
   return parts.length ? `<div class="material-subline material-mobile-meta">${escapeHtml(parts.join(" / "))}</div>` : "";
 }
 
-function renderTable() {
-  const rows = filterMaterials();
-  renderSummary(rows);
-  tbody.innerHTML = rows
+function renderActionButtons(material) {
+  return `
+    <div class="material-actions icon-actions">
+      <button type="button" class="btn icon-btn" onclick="editMaterial(${material.id})" title="编辑" aria-label="编辑">
+        <i data-lucide="square-pen"></i>
+      </button>
+      <button type="button" class="btn icon-btn" onclick="disableMaterial(${material.id})" title="停用" aria-label="停用">
+        <i data-lucide="pause-circle"></i>
+      </button>
+      <button type="button" class="btn icon-btn danger" onclick="removeMaterial(${material.id})" title="删除" aria-label="删除">
+        <i data-lucide="trash-2"></i>
+      </button>
+      <a class="btn icon-btn" href="/ui/materials/${material.id}/revisions" title="版本" aria-label="版本">
+        <i data-lucide="history"></i>
+      </a>
+    </div>
+  `;
+}
+
+function renderMobileList(rows) {
+  const mobileList = document.getElementById("materials-mobile-list");
+  if (!mobileList) return;
+
+  if (!rows.length) {
+    mobileList.innerHTML = `<div class="mobile-state-card">暂无匹配数据</div>`;
+    return;
+  }
+
+  mobileList.innerHTML = rows
     .map((material) => {
-      const actions = `
-        <div class="material-actions">
-          <button type="button" class="btn sm" onclick="editMaterial(${material.id})">编辑</button>
-          <button type="button" class="btn sm" onclick="disableMaterial(${material.id})">停用</button>
-          <button type="button" class="btn sm" onclick="removeMaterial(${material.id})">删除</button>
-          <a class="btn sm" href="/ui/materials/${material.id}/revisions">版本</a>
-        </div>`;
-      return `<tr data-mid="${material.id}">
-        <td>
-          <div class="material-name-cell">${escapeHtml(material.name || "")}</div>
-          <div class="material-subline">${escapeHtml(material.code || "")}</div>
-          ${renderMaterialMetaSummary(material)}
-        </td>
-        <td>
-          <div class="material-model-cell">${escapeHtml(formatModel(material) || "未填写")}</div>
-        </td>
-        <td><span class="meta-pill meta-pill-type">${escapeHtml(getMaterialType(material))}</span></td>
-        <td><span class="category-chip">${escapeHtml(material.category || "未分类")}</span></td>
-        <td><span class="meta-pill">${escapeHtml(material.package_name || "—")}</span></td>
-        <td>${renderStockCell(material)}</td>
-        <td><span class="meta-pill">${escapeHtml(material.storage_location || "—")}</span></td>
-        <td>${renderRemarkCell(material)}</td>
-        <td>${actions}</td>
-      </tr>`;
+      const modelSpec = getModelSpec(material) || "未填写";
+      const inactiveTag = material.is_active
+        ? ""
+        : `<span class="mobile-status-pill is-muted">停用</span>`;
+      const stockTag = isLowStock(material)
+        ? `<span class="mobile-status-pill is-alert">低库存 ${escapeHtml(formatNumber(material.current_stock) || "0")}</span>`
+        : `<span class="mobile-status-pill">库存 ${escapeHtml(formatNumber(material.current_stock) || "0")}</span>`;
+
+      return `
+        <article class="mobile-entity-card mobile-material-card">
+          <div class="mobile-entity-head">
+            <div class="mobile-entity-copy">
+              <h3>${escapeHtml(material.name || "")}</h3>
+            </div>
+            <div class="mobile-entity-tags">
+              ${inactiveTag}
+              ${stockTag}
+            </div>
+          </div>
+          <dl class="mobile-entity-meta mobile-material-meta">
+            <div><dt>分类</dt><dd>${escapeHtml(material.category || "-")}</dd></div>
+            <div><dt>库存</dt><dd>${escapeHtml(formatNumber(material.current_stock) || "0")}</dd></div>
+            <div><dt>库位</dt><dd>${escapeHtml(material.storage_location || "-")}</dd></div>
+            <div><dt>型号 / 规格</dt><dd>${escapeHtml(modelSpec)}</dd></div>
+          </dl>
+          <div class="mobile-entity-actions mobile-material-actions icon-actions">
+            <button type="button" class="btn icon-btn" onclick="editMaterial(${material.id})" title="编辑" aria-label="编辑">
+              <i data-lucide="square-pen"></i>
+            </button>
+            <button type="button" class="btn icon-btn" onclick="disableMaterial(${material.id})" title="停用" aria-label="停用">
+              <i data-lucide="pause-circle"></i>
+            </button>
+            <a class="btn icon-btn" href="/ui/materials/${material.id}/revisions" title="版本" aria-label="版本">
+              <i data-lucide="history"></i>
+            </a>
+            <button type="button" class="btn icon-btn danger" onclick="removeMaterial(${material.id})" title="删除" aria-label="删除">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </article>
+      `;
     })
     .join("");
+}
+
+function renderTable() {
+  const filters = getFilters();
+  const rows = filterMaterials();
+  renderSummary(rows);
+  renderViewBadge();
+  renderFilterSummary(filters, rows);
+
+  if (!rows.length) {
+    setTableState("暂无匹配数据");
+  } else {
+    tbody.innerHTML = rows
+      .map((material) => {
+        const modelSpec = getModelSpec(material) || "未填写";
+        return `<tr data-mid="${material.id}">
+          <td>
+            <div class="material-name-cell">${escapeHtml(material.name || "")}</div>
+            ${renderMaterialMetaSummary(material)}
+          </td>
+          <td><div class="material-model-cell">${escapeHtml(modelSpec)}</div></td>
+          <td><span class="meta-pill meta-pill-type">${escapeHtml(getMaterialType(material))}</span></td>
+          <td><span class="category-chip">${escapeHtml(material.category || "未分类")}</span></td>
+          <td>${renderStockCell(material)}</td>
+          <td><span class="meta-pill">${escapeHtml(material.storage_location || "-")}</span></td>
+          <td>${renderRemarkCell(material)}</td>
+          <td>${renderActionButtons(material)}</td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  renderMobileList(rows);
   const total = document.getElementById("materials-record-total");
   if (total) total.textContent = `共 ${rows.length} 条记录`;
+  refreshIcons();
 }
 
-const showMsg = (message, err = false) => {
-  msgBox.textContent = message;
-  msgBox.className = err ? "msg err" : "msg ok";
-};
-
-async function loadSuppliers() {
-  const response = await fetch("/suppliers");
-  allSuppliers = await response.json();
-}
-
-async function loadCategories() {
-  const response = await fetch("/material-categories");
-  const rows = await response.json();
-  allCategories = rows.filter((item) => item.is_active);
-  renderCategoryOptions();
-}
-
-async function loadSystemOptions() {
-  const response = await fetch("/system-options");
-  const rows = await response.json();
-  const active = rows.filter((item) => item.is_active);
-  optionMap = {
-    unit: active.filter((item) => item.option_type === "unit"),
-    tax_rate: active.filter((item) => item.option_type === "tax_rate"),
-    material_attr: active.filter((item) => item.option_type === "material_attr"),
-    grade: active.filter((item) => item.option_type === "grade"),
-  };
-  renderOptionSelect("m_unit", optionMap.unit, "请选择单位");
-  renderOptionSelect("m_tax_rate", optionMap.tax_rate, "请选择税率");
-  renderOptionSelect("m_material_name_attr", optionMap.material_attr, "请选择品牌 / 材质");
-  renderOptionSelect("m_grade_attr", optionMap.grade, "请选择等级 / 属性");
-}
-
-async function loadMaterials() {
-  const response = await fetch("/materials");
-  allMaterials = await response.json();
-  renderDynamicFilterOptions();
-  renderTable();
-}
-
-function openMaterialModal() {
-  document.getElementById("material-modal").classList.remove("hidden");
-  document.getElementById("material-modal-title").textContent = "新增物料";
+function resetMaterialForm() {
   document.getElementById("material-form").reset();
   document.getElementById("m_id").value = "";
-  document.getElementById("m_code").value = "";
+  document.getElementById("m_brand_attr").value = "";
+  document.querySelector(".material-form-advanced")?.removeAttribute("open");
   if (!document.getElementById("m_material_type").value) {
     document.getElementById("m_material_type").value = "电子元器件";
   }
@@ -327,10 +420,15 @@ function openMaterialModal() {
   refreshSupplierOptions();
 }
 
+function openMaterialModal() {
+  document.getElementById("material-modal").classList.remove("hidden");
+  document.getElementById("material-modal-title").textContent = "新增物料";
+  resetMaterialForm();
+}
+
 function closeMaterialModal() {
   document.getElementById("material-modal").classList.add("hidden");
-  document.getElementById("material-form").reset();
-  document.getElementById("m_id").value = "";
+  resetMaterialForm();
 }
 
 function openImportModal() {
@@ -346,25 +444,22 @@ function closeImportModal() {
 function editMaterial(id) {
   const material = allMaterials.find((item) => item.id === id);
   if (!material) return;
+
   openMaterialModal();
   document.getElementById("material-modal-title").textContent = "编辑物料";
+
   [
     "id",
-    "code",
     "name",
     "material_type",
-    "package_name",
     "storage_location",
     "unit",
     "category",
     "default_supplier",
-    "tax_rate",
     "unit_price",
     "safety_stock",
     "current_stock",
     "usage",
-    "material_name_attr",
-    "grade_attr",
     "purchase_link",
     "current_revision",
     "remark",
@@ -372,107 +467,138 @@ function editMaterial(id) {
     const element = document.getElementById(`m_${key}`);
     if (element) element.value = material[key] ?? "";
   });
-  document.getElementById("m_spec_draw").value = [material.spec || "", material.drawing_no || ""]
-    .filter(Boolean)
-    .join("\n");
+
+  document.getElementById("m_model_spec").value = getModelSpec(material);
+  document.getElementById("m_brand_attr").value = getBrandAttr(material);
+  document.querySelector(".material-form-advanced")?.setAttribute("open", "open");
+
   if (!document.getElementById("m_material_type").value) {
     document.getElementById("m_material_type").value = getMaterialType(material);
   }
   refreshSupplierOptions(material.default_supplier || "");
 }
 
-async function saveMaterial() {
-  const id = document.getElementById("m_id").value;
-  const { spec, drawing_no } = parseSpecDrawingInput(document.getElementById("m_spec_draw")?.value || "");
-  const payload = {
+function buildPayload() {
+  const modelSpec = normStr(document.getElementById("m_model_spec").value) || null;
+  const brandAttr = normStr(document.getElementById("m_brand_attr").value) || null;
+
+  return {
     name: normStr(document.getElementById("m_name").value),
-    spec,
-    drawing_no,
+    model_spec: modelSpec,
+    spec: modelSpec,
+    drawing_no: null,
+    package_name: null,
     material_type: normStr(document.getElementById("m_material_type").value) || null,
-    package_name: normStr(document.getElementById("m_package_name").value) || null,
     storage_location: normStr(document.getElementById("m_storage_location").value) || null,
-    unit: document.getElementById("m_unit").value,
-    category: document.getElementById("m_category").value,
-    default_supplier: document.getElementById("m_default_supplier").value || null,
-    tax_rate: document.getElementById("m_tax_rate").value || null,
+    unit: normStr(document.getElementById("m_unit").value) || null,
+    category: normStr(document.getElementById("m_category").value) || null,
+    default_supplier: normStr(document.getElementById("m_default_supplier").value) || null,
     unit_price: Number(document.getElementById("m_unit_price").value || 0),
     safety_stock: Number(document.getElementById("m_safety_stock").value || 0),
     current_stock: Number(document.getElementById("m_current_stock").value || 0),
     usage: normStr(document.getElementById("m_usage").value) || null,
-    material_name_attr: document.getElementById("m_material_name_attr").value || null,
-    grade_attr: document.getElementById("m_grade_attr").value || null,
+    brand_attr: brandAttr,
+    material_name_attr: brandAttr,
+    grade_attr: null,
     purchase_link: normStr(document.getElementById("m_purchase_link").value) || null,
     current_revision: normStr(document.getElementById("m_current_revision").value) || null,
     remark: normStr(document.getElementById("m_remark").value) || null,
   };
+}
+
+async function refreshMaterials(force = true) {
+  const basic = await appStore.initBasicData(["materials"], { force });
+  allMaterials = basic.materials || [];
+  renderDynamicFilterOptions();
+  renderTable();
+}
+
+async function saveMaterial() {
+  const id = document.getElementById("m_id").value;
+  const payload = buildPayload();
+
   if (!payload.name) return showMsg("名称必填", true);
   if (!payload.material_type) return showMsg("物料类型必填", true);
   if (!payload.category) return showMsg("分类必填", true);
-  const url = id ? `/materials/${id}` : "/materials";
-  const method = id ? "PUT" : "POST";
-  const response = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    return showMsg(error.detail || "保存失败", true);
+
+  try {
+    await http.request(id ? `/materials/${id}` : "/materials", {
+      method: id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    appStore.invalidate("materials");
+    showMsg("保存成功");
+    closeMaterialModal();
+    await refreshMaterials(true);
+  } catch (error) {
+    showMsg(error.message || "保存失败", true);
   }
-  showMsg("保存成功");
-  closeMaterialModal();
-  await loadMaterials();
 }
 
 async function disableMaterial(id) {
-  if (!confirm("确认停用该物料？")) return;
-  const response = await fetch(`/materials/${id}`, { method: "DELETE" });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    return showMsg(error.detail || "停用失败", true);
+  if (!window.confirm("确认停用该物料？")) return;
+  try {
+    await http.request(`/materials/${id}`, { method: "DELETE" });
+    appStore.invalidate("materials");
+    showMsg("已停用");
+    await refreshMaterials(true);
+  } catch (error) {
+    showMsg(error.message || "停用失败", true);
   }
-  showMsg("已停用");
-  await loadMaterials();
 }
 
 async function removeMaterial(id) {
-  if (!confirm("确认彻底删除该物料？删除后不可恢复。")) return;
-  const response = await fetch(`/materials/${id}/hard-delete`, { method: "DELETE" });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    return showMsg(error.detail || "删除失败", true);
+  if (!window.confirm("确认彻底删除该物料？删除后不可恢复。")) return;
+  try {
+    await http.request(`/materials/${id}/hard-delete`, { method: "DELETE" });
+    appStore.invalidate("materials");
+    showMsg("已删除");
+    await refreshMaterials(true);
+  } catch (error) {
+    showMsg(error.message || "删除失败", true);
   }
-  showMsg("已删除");
-  await loadMaterials();
 }
 
 async function importMaterialsFromFile(file) {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch("/import/materials", { method: "POST", body: formData });
-  let data = {};
+
   try {
-    data = await response.json();
-  } catch (_) {}
-  if (!response.ok) {
-    const detail = data.detail;
-    const message =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? JSON.stringify(detail)
-          : response.statusText || "导入失败";
-    return showMsg(message, true);
+    const data = await http.request("/import/materials", { method: "POST", body: formData });
+    let message = `导入完成：成功 ${data.created ?? 0} 条，失败 ${data.failed ?? 0} 条`;
+    if (data.errors?.length) {
+      const example = data.errors[0];
+      message += `。示例：第 ${example.row} 行 - ${example.message}`;
+      if (data.errors.length > 1) message += `（另 ${data.errors.length - 1} 条错误已省略）`;
+    }
+    appStore.invalidate("materials");
+    showMsg(message, (data.failed || 0) > 0 && (data.created || 0) === 0);
+    closeImportModal();
+    if (data.created > 0) {
+      await refreshMaterials(true);
+    }
+  } catch (error) {
+    showMsg(error.message || "导入失败", true);
   }
-  let message = `导入完成：成功 ${data.created ?? 0} 条，失败 ${data.failed ?? 0} 条`;
-  if (data.errors && data.errors.length) {
-    const example = data.errors[0];
-    message += `。示例：第 ${example.row} 行 - ${example.message}`;
-    if (data.errors.length > 1) message += `（另 ${data.errors.length - 1} 条错误已省略）`;
-  }
-  showMsg(message, (data.failed || 0) > 0 && (data.created || 0) === 0);
-  closeImportModal();
-  if (data.created > 0) await loadMaterials();
+}
+
+async function loadBasicData(force = false) {
+  const basic = await appStore.initBasicData(["suppliers", "materialCategories", "systemOptions"], { force });
+
+  allSuppliers = basic.suppliers || [];
+  allCategories = (basic.materialCategories || []).filter((item) => item.is_active);
+  const activeOptions = (basic.systemOptions || []).filter((item) => item.is_active);
+
+  optionMap = {
+    unit: activeOptions.filter((item) => item.option_type === "unit"),
+    material_attr: activeOptions.filter((item) => item.option_type === "material_attr"),
+    grade: activeOptions.filter((item) => item.option_type === "grade"),
+  };
+
+  renderCategoryOptions();
+  renderSelectOptions("m_unit", optionMap.unit, "请选择单位");
+  renderBrandAttrSuggestions();
 }
 
 document.getElementById("material-import-open-btn")?.addEventListener("click", openImportModal);
@@ -491,7 +617,6 @@ document.getElementById("material-clear-filters")?.addEventListener("click", () 
   document.getElementById("f_keyword").value = "";
   document.getElementById("f_material_type").value = "";
   document.getElementById("f_category").value = "";
-  document.getElementById("f_package").value = "";
   document.getElementById("f_location").value = "";
   renderTable();
 });
@@ -500,16 +625,29 @@ document.getElementById("material-clear-filters")?.addEventListener("click", () 
   ["f_keyword", "input"],
   ["f_material_type", "change"],
   ["f_category", "change"],
-  ["f_package", "change"],
   ["f_location", "change"],
 ].forEach(([id, eventName]) => {
   const element = document.getElementById(id);
   if (element) element.addEventListener(eventName, renderTable);
 });
 
-renderMaterialTypeOptions();
+window.openMaterialModal = openMaterialModal;
+window.closeMaterialModal = closeMaterialModal;
+window.refreshSupplierOptions = refreshSupplierOptions;
+window.editMaterial = editMaterial;
+window.saveMaterial = saveMaterial;
+window.disableMaterial = disableMaterial;
+window.removeMaterial = removeMaterial;
 
-loadCategories()
-  .then(() => loadSystemOptions())
-  .then(() => loadSuppliers())
-  .then(() => loadMaterials());
+renderMaterialTypeOptions();
+setTableState("加载中...");
+
+(async function initMaterialsPage() {
+  try {
+    await loadBasicData();
+    await refreshMaterials(false);
+  } catch (error) {
+    setTableState("加载失败，请刷新重试");
+    showMsg(error.message || "加载失败", true);
+  }
+})();

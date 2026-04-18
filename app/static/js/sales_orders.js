@@ -67,7 +67,7 @@ function canManualConfirm(r) {
 
 async function loadDefaultLogisticsTaobao() {
   try {
-    const res = await fetch("/integrations/taobao/config");
+    const res = await http.fetch("/integrations/taobao/config");
     if (!res.ok) return;
     const c = await res.json();
     if (c.taobao_default_logistics_code) {
@@ -117,7 +117,7 @@ let _productsCache = null;
 
 async function ensureProducts() {
   if (_productsCache) return _productsCache;
-  const res = await fetch("/products");
+  const res = await http.fetch("/products");
   if (!res.ok) throw new Error("加载产品列表失败");
   const raw = await res.json();
   _productsCache = raw.filter((p) => p.is_active !== false);
@@ -303,7 +303,7 @@ async function openManualModalEdit(orderId) {
   } catch (e) {
     return showMsg(e.message || String(e), true);
   }
-  const res = await fetch(`/sales/orders/${orderId}`);
+  const res = await http.fetch(`/sales/orders/${orderId}`);
   if (!res.ok) return showMsg("加载订单失败", true);
   const r = await res.json();
   if (r.channel !== "manual") return showMsg("仅可编辑手工单", true);
@@ -349,7 +349,7 @@ function openInvoiceModal(r) {
 }
 
 async function loadList() {
-  const res = await fetch("/sales/orders");
+  const res = await http.fetch("/sales/orders");
   if (!res.ok) return showMsg("加载销售订单失败", true);
   const rows = await res.json();
   const tb = document.getElementById("so-tbody");
@@ -450,7 +450,7 @@ document.getElementById("so_manual_save").addEventListener("click", async () => 
   };
   try {
     if (oid) {
-      const res = await fetch(`/sales/orders/${oid}/manual`, {
+      const res = await http.fetch(`/sales/orders/${oid}/manual`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(base),
@@ -462,7 +462,7 @@ document.getElementById("so_manual_save").addEventListener("click", async () => 
       showMsg("已保存修改");
     } else {
       base.confirm_immediately = document.getElementById("so_m_confirm_now").checked;
-      const res = await fetch("/sales/orders/manual", {
+      const res = await http.fetch("/sales/orders/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(base),
@@ -496,7 +496,7 @@ document.getElementById("so_inv_save").addEventListener("click", async () => {
   const body = { invoice_status };
   if (invoice_no) body.invoice_no = invoice_no;
   if (at) body.invoiced_at = new Date(at).toISOString();
-  const res = await fetch(`/sales/orders/${id}/invoice`, {
+  const res = await http.fetch(`/sales/orders/${id}/invoice`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -512,7 +512,7 @@ document.getElementById("so_inv_save").addEventListener("click", async () => {
 
 document.getElementById("so_sync").addEventListener("click", async () => {
   showMsg("正在同步淘宝…");
-  const res = await fetch("/sales/orders/sync-taobao?hours_back=168", { method: "POST" });
+  const res = await http.fetch("/sales/orders/sync-taobao?hours_back=168", { method: "POST" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail) || "同步失败", true);
@@ -524,7 +524,7 @@ document.getElementById("so_sync").addEventListener("click", async () => {
 
 document.getElementById("so_sync_wc").addEventListener("click", async () => {
   showMsg("正在同步 WooCommerce…");
-  const res = await fetch("/sales/orders/sync-woocommerce?hours_back=720", { method: "POST" });
+  const res = await http.fetch("/sales/orders/sync-woocommerce?hours_back=720", { method: "POST" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail) || "同步失败", true);
@@ -548,7 +548,7 @@ document.getElementById("so-tbody").addEventListener("click", (e) => {
   if (c) {
     const id = c.getAttribute("data-confirm-manual");
     (async () => {
-      const res = await fetch(`/sales/orders/${id}/manual/confirm`, { method: "POST" });
+      const res = await http.fetch(`/sales/orders/${id}/manual/confirm`, { method: "POST" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         return showMsg(typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail) || "操作失败", true);
@@ -567,7 +567,7 @@ document.getElementById("so-tbody").addEventListener("click", (e) => {
   if (inv) {
     const oid = inv.getAttribute("data-inv-id");
     (async () => {
-      const res = await fetch(`/sales/orders/${oid}`);
+      const res = await http.fetch(`/sales/orders/${oid}`);
       if (!res.ok) return showMsg("加载订单失败", true);
       openInvoiceModal(await res.json());
     })();
@@ -585,7 +585,7 @@ document.getElementById("so_ship_save").addEventListener("click", async () => {
     const tracking_number = document.getElementById("so_manual_tracking").value.trim();
     const carrier_name = document.getElementById("so_manual_carrier").value.trim() || null;
     if (!tracking_number) return showMsg("请填写运单号", true);
-    const res = await fetch(`/sales/orders/${id}/manual/ship`, {
+    const res = await http.fetch(`/sales/orders/${id}/manual/ship`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tracking_number, carrier_name }),
@@ -600,7 +600,7 @@ document.getElementById("so_ship_save").addEventListener("click", async () => {
     const carrier_name = document.getElementById("so_wc_carrier").value.trim() || null;
     const set_status_completed = document.getElementById("so_wc_completed").checked;
     if (!tracking_number) return showMsg("请填写运单号", true);
-    const res = await fetch(`/sales/orders/${id}/woocommerce-ship`, {
+    const res = await http.fetch(`/sales/orders/${id}/woocommerce-ship`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tracking_number, carrier_name, set_status_completed }),
@@ -614,7 +614,7 @@ document.getElementById("so_ship_save").addEventListener("click", async () => {
     const company_code = document.getElementById("so_company_code").value.trim();
     const out_sid = document.getElementById("so_out_sid").value.trim();
     if (!company_code || !out_sid) return showMsg("请填写物流公司编码与运单号", true);
-    const res = await fetch(`/sales/orders/${id}/taobao-ship`, {
+    const res = await http.fetch(`/sales/orders/${id}/taobao-ship`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ company_code, out_sid }),

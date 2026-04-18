@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from app import crud
 from app.database import (
     BASE_DIR,
     Base,
@@ -19,7 +20,6 @@ from app.database import (
     ensure_sqlite_supplier_columns,
     migrate_inquiry_lines_material_ref_only,
 )
-from app import crud
 from app.routes import (
     bom,
     company_settings,
@@ -53,6 +53,7 @@ migrate_inquiry_lines_material_ref_only()
 ensure_purchase_order_extensions()
 ensure_sqlite_sales_orders_columns()
 ensure_sqlite_sales_order_lines_product_id()
+ensure_sqlite_app_integration_woocommerce_columns()
 (BASE_DIR / "uploads" / "purchase_invoices").mkdir(parents=True, exist_ok=True)
 (BASE_DIR / "uploads" / "revision_drawings").mkdir(parents=True, exist_ok=True)
 _db_boot = SessionLocal()
@@ -64,41 +65,48 @@ finally:
 app = FastAPI(
     title="ERP_W / Inventory API",
     version="0.1.0",
-    description="机械产品物料、BOM、版本、库存、采购建议 MVP",
+    description="ERP_W API",
 )
 
-app.include_router(materials.router)
-app.include_router(materials.router, prefix="/api/v1")
-app.include_router(material_categories.router)
-app.include_router(system_options.router)
-app.include_router(revisions.router)
-app.include_router(bom.router)
-app.include_router(inventory.router)
-app.include_router(procurement.router)
-app.include_router(production_plans.router)
-app.include_router(products.router)
-app.include_router(inquiries.router)
-app.include_router(company_settings.router)
-app.include_router(integrations_taobao.router)
-app.include_router(integrations_woocommerce.router)
-app.include_router(sales.router)
-app.include_router(purchase_orders.router)
-app.include_router(suppliers.router)
+api_routers = [
+    materials.router,
+    material_categories.router,
+    system_options.router,
+    revisions.router,
+    bom.router,
+    inventory.router,
+    procurement.router,
+    production_plans.router,
+    products.router,
+    inquiries.router,
+    company_settings.router,
+    integrations_taobao.router,
+    integrations_woocommerce.router,
+    sales.router,
+    purchase_orders.router,
+    suppliers.router,
+    excel_exports.router,
+    excel_imports.router,
+    ui.api_router,
+]
+
+for router in api_routers:
+    app.include_router(router)
+    app.include_router(router, prefix="/api")
+
 app.include_router(ui.router)
-app.include_router(excel_exports.router)
-app.include_router(excel_imports.router)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 @app.get("/")
 def root():
-    return RedirectResponse(url="/inventory")
+    return RedirectResponse(url="/ui/materials")
 
 
 @app.get("/inventory")
 @app.get("/inventory/")
 def inventory_entry():
-    return RedirectResponse(url="/ui")
+    return RedirectResponse(url="/ui/materials")
 
 
 @app.get("/pcba")

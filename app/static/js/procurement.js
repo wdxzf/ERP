@@ -7,14 +7,14 @@ const pMsg = (m, err = false) => {
 };
 
 async function loadBoms() {
-  const boms = await (await fetch("/boms")).json();
+  const boms = await (await http.fetch("/boms")).json();
   const sel = document.getElementById("p_bom_id");
   sel.innerHTML = boms.map(b => `<option value="${b.id}">${b.product_code} | ${b.product_name} | ${b.bom_version}${b.is_current ? " (current)" : ""}</option>`).join("");
 }
 
 async function calcShortage() {
   const payload = { bom_id: Number(p_bom_id.value), production_qty: Number(p_qty.value) };
-  const res = await fetch("/procurement/shortage-calc", {
+  const res = await http.fetch("/procurement/shortage-calc", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(payload)

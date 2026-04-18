@@ -2,30 +2,87 @@
 {% block content %}
 <input type="hidden" id="view_mode" value="{{ view_mode or 'all' }}">
 
-<section class="card tool-panel material-library-panel">
+<section class="card tool-panel material-library-panel material-search-panel">
   <div class="material-library-hero">
+    <div class="page-section-intro material-library-intro">
+      <div>
+        <div class="section-eyebrow">物料管理</div>
+        <div class="page-section-title-row">
+          <h2 class="page-section-title">物料列表</h2>
+          <span id="materials-view-badge" class="page-type-badge">全部物料</span>
+        </div>
+      </div>
+    </div>
     <div class="tool-panel-actions material-library-actions-shell">
-      <button class="btn primary action-btn material-primary-action material-primary-action-hero" onclick="openMaterialModal()">新增物料</button>
-      <button type="button" class="btn action-btn" id="material-import-open-btn">导入 Excel</button>
-      <a class="btn action-btn" href="/import/materials/template">下载模板</a>
-      <a class="btn action-btn" href="/export/materials?view={{ view_mode or 'all' }}">导出 Excel</a>
+      <button
+        class="btn action-btn quick-action-tile"
+        type="button"
+        onclick="openMaterialModal()"
+        title="新增物料"
+        aria-label="新增物料"
+      >
+        <i data-lucide="plus"></i>
+      </button>
+      <button
+        type="button"
+        class="btn action-btn quick-action-tile"
+        id="material-import-open-btn"
+        title="导入 Excel"
+        aria-label="导入 Excel"
+      >
+        <i data-lucide="upload"></i>
+      </button>
+      <a
+        class="btn action-btn quick-action-tile"
+        href="/api/import/materials/template"
+        title="下载模板"
+        aria-label="下载模板"
+      >
+        <i data-lucide="file-down"></i>
+      </a>
+      <a
+        class="btn action-btn quick-action-tile"
+        href="/api/export/materials?view={{ view_mode or 'all' }}"
+        title="导出 Excel"
+        aria-label="导出 Excel"
+      >
+        <i data-lucide="download"></i>
+      </a>
     </div>
   </div>
 
   <div class="section-divider"></div>
 
-  <div class="material-library-section">
+  <div class="material-library-section material-library-section-compact">
     <div class="material-library-filters-head">
       <div class="section-eyebrow">筛选条件</div>
-      <button type="button" class="filter-clear-link" id="material-clear-filters">重置筛选</button>
+      <div class="summary-inline summary-inline-compact">
+        <span class="summary-chip summary-chip-compact">
+          <span class="summary-chip-label">总数</span>
+          <span id="m_total_count" class="summary-chip-value">0</span>
+        </span>
+        <span class="summary-chip summary-chip-compact summary-chip-alert">
+          <span class="summary-chip-label">低库存</span>
+          <span id="m_low_stock_count" class="summary-chip-value">0</span>
+        </span>
+        <span class="summary-chip summary-chip-compact">
+          <span class="summary-chip-label">7天新增</span>
+          <span id="m_recent_count" class="summary-chip-value">0</span>
+        </span>
+        <span class="summary-chip summary-chip-compact">
+          <span class="summary-chip-label">未分类</span>
+          <span id="m_uncategorized_count" class="summary-chip-value">0</span>
+        </span>
+      </div>
+      <div class="material-library-filter-side">
+        <span id="materials-filter-summary" class="list-total-edge">当前未启用筛选</span>
+        <button type="button" class="filter-clear-link" id="material-clear-filters">重置筛选</button>
+      </div>
     </div>
-    <div class="filters inventory-filters inventory-filters-main material-library-filters material-library-search-row">
-      <input id="f_keyword" placeholder="搜索名称 / 型号 / 参数" autocomplete="off">
-    </div>
-    <div class="filters inventory-filters inventory-filters-main material-library-filters material-library-filter-grid">
+    <div class="filters inventory-filters inventory-filters-main material-library-filters material-library-search-row compact-search-row">
+      <input id="f_keyword" placeholder="搜索名称 / 编码 / 型号规格 / 品牌属性 / 备注" autocomplete="off">
       <select id="f_material_type"></select>
       <select id="f_category"></select>
-      <select id="f_package"></select>
       <select id="f_location"></select>
     </div>
   </div>
@@ -37,72 +94,122 @@
   <div class="card-title-row materials-batch-bar inventory-table-toolbar">
     <div class="table-toolbar-left material-library-table-header">
       <strong>物料列表</strong>
-      <span id="materials-record-total" class="list-total-edge material-library-total">共 0 条记录</span>
+      <span id="materials-record-total" class="record-badge record-badge-strong material-library-total">共 0 条记录</span>
     </div>
   </div>
   <table id="materials-table">
     <colgroup>
-      <col class="mc-name"><col class="mc-model"><col class="mc-type"><col class="mc-cat"><col class="mc-package">
+      <col class="mc-name"><col class="mc-model"><col class="mc-type"><col class="mc-cat">
       <col class="mc-stock"><col class="mc-location"><col class="mc-remark"><col class="mc-actions">
     </colgroup>
     <thead>
       <tr>
         <th>名称</th>
-        <th>型号</th>
+        <th>型号 / 规格</th>
         <th>类型</th>
         <th>分类</th>
-        <th>封装</th>
         <th>库存</th>
         <th>库位</th>
         <th>备注</th>
         <th>操作</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <tr><td colspan="8" class="table-state-cell">加载中...</td></tr>
+    </tbody>
   </table>
+  <div id="materials-mobile-list" class="materials-mobile-list" aria-live="polite"></div>
 </div>
 
 <div id="material-modal" class="modal hidden">
   <div class="modal-body inventory-modal">
     <h3 id="material-modal-title">新增物料</h3>
-    <form id="material-form" class="form-grid inventory-form-grid">
+    <form id="material-form">
       <input type="hidden" id="m_id">
-      <label>编码<input id="m_code" placeholder="保存后自动生成" readonly></label>
-      <label>名称<input id="m_name" required placeholder="例如：贴片电阻 / 减速电机 / 20x20 铝型材"></label>
-      <label>型号 / 参数<textarea id="m_spec_draw" rows="2" placeholder="可写型号、关键参数、规格或图号"></textarea></label>
-      <label>物料类型
-        <select id="m_material_type"></select>
-      </label>
-      <label>分类
-        <select id="m_category" onchange="refreshSupplierOptions()">
-          <option value="">请选择分类</option>
-        </select>
-      </label>
-      <label>封装<input id="m_package_name" placeholder="例如：0402 / SOT-23 / 结构件可留空"></label>
-      <label>库位<input id="m_storage_location" placeholder="例如：A2-3 / 五金柜 / 钢材架"></label>
-      <label>单位
-        <select id="m_unit"></select>
-      </label>
-      <label>默认供应商
-        <select id="m_default_supplier"></select>
-      </label>
-      <label>品牌 / 材质
-        <select id="m_material_name_attr"></select>
-      </label>
-      <label>等级 / 属性
-        <select id="m_grade_attr"></select>
-      </label>
-      <label>单价<input id="m_unit_price" type="number" step="0.01" value="0"></label>
-      <label>最低库存<input id="m_safety_stock" type="number" step="0.01" value="0"></label>
-      <label>当前库存<input id="m_current_stock" type="number" step="0.01" value="0"></label>
-      <label>税率
-        <select id="m_tax_rate"></select>
-      </label>
-      <label>用途 / 所属项目<input id="m_usage" placeholder="例如：ROS 小车 / 电源板 / 常备件"></label>
-      <label>当前版本<input id="m_current_revision" placeholder="可填版本、批次或修订号"></label>
-      <label class="full">采购链接<input id="m_purchase_link" placeholder="https://..."></label>
-      <label class="full">备注<textarea id="m_remark" rows="2" placeholder="记录替代料、适配型号、加工要求或补货说明"></textarea></label>
+
+      <div class="material-form-section">
+        <div class="section-eyebrow">基础信息</div>
+        <div class="form-grid inventory-form-grid">
+          <label class="span-2">
+            名称
+            <input id="m_name" required placeholder="例如：贴片电阻 / 减速电机 / 20x20 铝型材">
+          </label>
+          <label class="span-2">
+            型号 / 规格
+            <input id="m_model_spec" placeholder="例如：10k 1% 0402 / M3x8 / 220V 10A">
+          </label>
+          <label>
+            物料类型
+            <select id="m_material_type"></select>
+          </label>
+          <label>
+            分类
+            <select id="m_category" onchange="refreshSupplierOptions()">
+              <option value="">请选择分类</option>
+            </select>
+          </label>
+          <label>
+            单位
+            <select id="m_unit"></select>
+          </label>
+          <label>
+            默认供应商
+            <select id="m_default_supplier"></select>
+          </label>
+          <label>
+            单价
+            <input id="m_unit_price" type="number" step="0.01" value="0">
+          </label>
+        </div>
+      </div>
+
+      <details class="material-form-advanced">
+        <summary>
+          <span class="material-form-advanced-toggle" aria-hidden="true">
+            <span class="icon-collapsed">▶</span>
+            <span class="icon-expanded">▼</span>
+          </span>
+          <span>高级信息</span>
+        </summary>
+        <div class="material-form-section">
+          <div class="form-grid inventory-form-grid">
+            <label>
+              用途 / 所属项目
+              <input id="m_usage" placeholder="例如：ROS 小车 / 电源板 / 常备件">
+            </label>
+            <label class="full">
+              备注
+              <textarea id="m_remark" rows="2" placeholder="记录替代料、适配型号、加工要求或补货说明"></textarea>
+            </label>
+            <label>
+              品牌 / 属性
+              <input id="m_brand_attr" list="m_brand_attr_options" placeholder="例如：TI / 304不锈钢 / 高强度">
+            </label>
+            <label class="span-2">
+              采购链接
+              <input id="m_purchase_link" placeholder="https://...">
+            </label>
+            <label>
+              库位
+              <input id="m_storage_location" placeholder="例如：A2-3 / 五金柜 / 钢材架">
+            </label>
+            <label>
+              最低库存
+              <input id="m_safety_stock" type="number" step="0.01" value="0">
+            </label>
+            <label>
+              当前库存
+              <input id="m_current_stock" type="number" step="0.01" value="0" readonly>
+            </label>
+            <label>
+              当前版本
+              <input id="m_current_revision" placeholder="可填版本、批次或修订单号">
+            </label>
+          </div>
+        </div>
+      </details>
     </form>
+    <datalist id="m_brand_attr_options"></datalist>
     <div class="btn-row">
       <button class="btn primary" onclick="saveMaterial()">保存</button>
       <button class="btn" onclick="closeMaterialModal()">取消</button>
@@ -113,7 +220,7 @@
 <div id="material-import-modal" class="modal hidden">
   <div class="modal-body import-modal">
     <h3>导入物料 Excel</h3>
-    <p class="modal-note">主页面不再常驻文件选择框，导入时在这里选择文件即可。</p>
+    <p class="modal-note">主页不常驻文件选择框，导入时在这里选择文件即可。</p>
     <div class="import-modal-body">
       <input type="file" id="material-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
       <div class="btn-row">
@@ -124,5 +231,8 @@
   </div>
 </div>
 
-<script src="/static/js/materials.js?v=20260416-2"></script>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="/static/js/materials.js?v=20260418-4"></script>
 {% endblock %}

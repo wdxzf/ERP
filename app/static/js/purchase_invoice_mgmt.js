@@ -107,7 +107,7 @@ function closePiModal() {
 }
 
 async function loadOrderTable() {
-  const res = await fetch("/purchase-orders");
+  const res = await http.fetch("/purchase-orders");
   if (!res.ok) return showMsg("加载订单列表失败", true);
   const rows = await res.json();
   const sorted = [...rows].sort((a, b) => b.id - a.id);
@@ -136,7 +136,7 @@ document.getElementById("pi_order_tbody").addEventListener("click", async (e) =>
   const addBtn = e.target.closest("[data-pi-add]");
   const id = viewBtn?.getAttribute("data-pi-view") || addBtn?.getAttribute("data-pi-add");
   if (!id) return;
-  const res = await fetch(`/purchase-orders/${id}`);
+  const res = await http.fetch(`/purchase-orders/${id}`);
   if (!res.ok) return showMsg("加载订单失败", true);
   const po = await res.json();
   openPiModal(po, Boolean(addBtn));
@@ -157,14 +157,14 @@ document.getElementById("pi_upload").addEventListener("click", async () => {
   const rm = document.getElementById("pi_inv_remark").value.trim();
   if (rm) fd.append("remark", rm);
   fd.append("file", fileEl.files[0]);
-  const res = await fetch(`/purchase-orders/${id}/invoices`, { method: "POST", body: fd });
+  const res = await http.fetch(`/purchase-orders/${id}/invoices`, { method: "POST", body: fd });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return showMsg(typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail) || "上传失败", true);
   }
   showMsg("发票已保存");
   clearUploadForm();
-  const r2 = await fetch(`/purchase-orders/${id}`);
+  const r2 = await http.fetch(`/purchase-orders/${id}`);
   if (r2.ok) {
     const po = await r2.json();
     renderModalInvoices(po);
@@ -179,10 +179,10 @@ document.getElementById("pi_modal_list").addEventListener("click", async (e) => 
   const pid = currentPoId;
   if (!invId || !pid) return;
   if (!confirm("确定删除该发票记录及文件？")) return;
-  const res = await fetch(`/purchase-orders/${pid}/invoices/${invId}`, { method: "DELETE" });
+  const res = await http.fetch(`/purchase-orders/${pid}/invoices/${invId}`, { method: "DELETE" });
   if (!res.ok) return showMsg("删除失败", true);
   showMsg("已删除");
-  const r2 = await fetch(`/purchase-orders/${pid}`);
+  const r2 = await http.fetch(`/purchase-orders/${pid}`);
   if (r2.ok) {
     renderModalInvoices(await r2.json());
     await loadOrderTable();

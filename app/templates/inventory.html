@@ -14,18 +14,6 @@
     <button type="button" class="btn" onclick="exportInventoryExcel()">导出 Excel</button>
   </div>
 </div>
-<script>
-function exportInventoryExcel() {
-  const mid = document.getElementById('i_material_id').value.trim();
-  const tt = document.getElementById('i_type').value;
-  let u = '/export/inventory';
-  const q = [];
-  if (mid) q.push('material_id=' + encodeURIComponent(mid));
-  if (tt) q.push('transaction_type=' + encodeURIComponent(tt));
-  if (q.length) u += '?' + q.join('&');
-  location.href = u;
-}
-</script>
 <div id="msg" class="msg"></div>
 <div class="card">
   <div class="list-total"><span id="tx-record-total">共 0 条记录</span></div>
@@ -56,5 +44,20 @@ function exportInventoryExcel() {
   </div>
 </div>
 
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function exportInventoryExcel() {
+  const mid = document.getElementById('i_material_id').value.trim();
+  const tt = document.getElementById('i_type').value;
+  let u = '/api/export/inventory';
+  const q = [];
+  if (mid) q.push('material_id=' + encodeURIComponent(mid));
+  if (tt) q.push('transaction_type=' + encodeURIComponent(tt));
+  if (q.length) u += '?' + q.join('&');
+  location.href = u;
+}
+</script>
 <script src="/static/js/inventory.js"></script>
 {% endblock %}

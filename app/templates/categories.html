@@ -1,10 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="card categories-controls-card">
+<div class="card categories-controls-card categories-controls-card-compact">
+  <div class="page-section-intro categories-intro">
+    <div>
+      <div class="section-eyebrow">基础数据</div>
+      <div class="page-section-title-row">
+        <h2 class="page-section-title">分类管理</h2>
+        <span id="cat-type-badge" class="page-type-badge">元件分类</span>
+      </div>
+      <p class="page-section-copy">集中维护物料分类与通用选项，页面会按当前类型切换字段和校验规则。</p>
+    </div>
+    <div class="summary-inline summary-inline-compact categories-summary-strip">
+      <span class="summary-chip summary-chip-compact">
+        <span class="summary-chip-label">总数</span>
+        <span id="cat-total-stat" class="summary-chip-value">0</span>
+      </span>
+      <span class="summary-chip summary-chip-compact">
+        <span class="summary-chip-label">启用</span>
+        <span id="cat-active-stat" class="summary-chip-value">0</span>
+      </span>
+      <span class="summary-chip summary-chip-compact">
+        <span class="summary-chip-label">停用</span>
+        <span id="cat-inactive-stat" class="summary-chip-value">0</span>
+      </span>
+    </div>
+  </div>
+  <div class="section-divider"></div>
   <div class="categories-controls">
     <div class="categories-filter-block">
       <div class="section-eyebrow">筛选条件</div>
-      <div class="categories-filter-fields">
+      <div class="categories-filter-fields categories-filter-fields-compact">
         <label>类别类型
           <select id="c_type" onchange="onTypeChanged()">
             <option value="category">元件分类</option>
@@ -21,11 +46,11 @@
       </div>
     </div>
     <div class="categories-action-block">
-      <div class="section-eyebrow">快速操作</div>
+      <div class="section-eyebrow">快捷操作</div>
       <div class="categories-actions">
         <button class="btn primary" onclick="openCategoryModal()">新增</button>
-        <button type="button" class="btn success" onclick="location.href='/export/categories?type='+encodeURIComponent(document.getElementById('c_type').value)">
-          <span class="btn-prefix" aria-hidden="true">↧</span>
+        <button type="button" class="btn success" onclick="location.href='/api/export/categories?type='+encodeURIComponent(document.getElementById('c_type').value)">
+          <span class="btn-prefix" aria-hidden="true">↗</span>
           导出 Excel
         </button>
       </div>
@@ -37,7 +62,7 @@
   <div class="card-title-row categories-toolbar">
     <div class="categories-summary">
       <h3 id="cat-table-title">分类列表</h3>
-      <span id="cat-record-total" class="record-badge">共 0 条</span>
+      <span id="cat-record-total" class="record-badge record-badge-strong">共 0 条</span>
     </div>
     <div id="cat-page-summary" class="list-total-edge"></div>
   </div>
@@ -45,8 +70,11 @@
     <thead>
       <tr><th>名称</th><th id="th-prefix">编码前缀</th><th>排序</th><th>状态</th><th>备注</th><th>操作</th></tr>
     </thead>
-    <tbody id="cat-tbody"></tbody>
+    <tbody id="cat-tbody">
+      <tr><td colspan="6" class="table-state-cell">加载中...</td></tr>
+    </tbody>
   </table>
+  <div id="categories-mobile-list" class="categories-mobile-list" aria-live="polite"></div>
   <div class="table-pagination" id="cat-pagination">
     <button type="button" class="btn sm" id="cat-prev-page">上一页</button>
     <span id="cat-pagination-text" class="pagination-text">第 1 / 1 页</span>
@@ -73,5 +101,8 @@
     </div>
   </div>
 </div>
-<script src="/static/js/categories.js?v=20260409-2"></script>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="/static/js/categories.js?v=20260418-1"></script>
 {% endblock %}

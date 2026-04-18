@@ -181,9 +181,8 @@ function fillSupplierFieldsByCompany(companyName) {
 }
 
 async function loadSuppliers() {
-  const res = await fetch("/suppliers");
-  if (!res.ok) return;
-  allSuppliers = await res.json();
+  const basic = await appStore.initBasicData(["suppliers"]);
+  allSuppliers = basic.suppliers || [];
   renderSupplierOptions();
 }
 
@@ -368,11 +367,9 @@ async function resetFormNew() {
   });
   let deliveryAddr = "";
   try {
-    const res = await fetch("/company-profile");
-    if (res.ok) {
-      const p = await res.json();
-      deliveryAddr = (p.address || "").trim();
-    }
+    const basic = await appStore.initBasicData(["companyProfile"]);
+    const p = basic.companyProfile || {};
+    deliveryAddr = (p.address || "").trim();
   } catch (_) {}
   document.getElementById("po_delivery_address").value = deliveryAddr;
   ["po_supplier_company", "po_supplier_tax_no", "po_supplier_bank", "po_supplier_account", "po_supplier_address", "po_supplier_phone", "po_supplier_contact"].forEach((id) => {
@@ -386,7 +383,7 @@ async function resetFormNew() {
 }
 
 async function loadList() {
-  const res = await fetch("/purchase-orders");
+  const res = await http.fetch("/purchase-orders");
   if (!res.ok) return showMsg("加载订单列表失败", true);
   const rows = await res.json();
   const tb = document.getElementById("po-tbody");
@@ -406,7 +403,7 @@ async function loadList() {
     <td class="po-list-actions">
       <button type="button" class="btn sm" data-edit="${r.id}">编辑</button>
       <button type="button" class="btn sm" data-quick-status="${r.id}" data-order-no="${escAttr(r.order_no)}" data-current-status="${escAttr(r.status)}" data-current-payment="${escAttr(r.payment_status || "unpaid")}">修改状态</button>
-      <a class="btn sm" href="/purchase-orders/${r.id}/pdf" target="_blank">导出PDF</a>
+      <a class="btn sm" href="/api/purchase-orders/${r.id}/pdf" target="_blank">导出PDF</a>
     </td>
   </tr>`;
       }
@@ -417,7 +414,7 @@ async function loadList() {
 }
 
 async function openEdit(id) {
-  const res = await fetch(`/purchase-orders/${id}`);
+  const res = await http.fetch(`/purchase-orders/${id}`);
   if (!res.ok) return showMsg("加载订单失败", true);
   const r = await res.json();
   document.getElementById("po_id").value = String(r.id);
@@ -490,7 +487,7 @@ document.getElementById("po_save").addEventListener("click", async () => {
     url = `/purchase-orders/${id}`;
     method = "PUT";
   }
-  const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const res = await http.fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return showMsg(typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail) || "保存失败", true);
@@ -520,7 +517,7 @@ document.getElementById("po_status_modal_save").addEventListener("click", async 
   if (!id) return;
   const status = document.getElementById("po_status_modal_sel").value;
   const payment_status = document.getElementById("po_payment_modal_sel").value;
-  const res = await fetch(`/purchase-orders/${id}`, {
+  const res = await http.fetch(`/purchase-orders/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status, payment_status }),

@@ -5,7 +5,7 @@
     <input id="b_product_code" placeholder="产品编码">
     <input id="b_product_name" placeholder="产品名称">
     <button class="btn primary" onclick="openBomModal()">新增 BOM</button>
-    <a class="btn" href="/export/boms">导出 Excel</a>
+    <a class="btn" href="/api/export/boms">导出 Excel</a>
   </div>
 </div>
 <div id="msg" class="msg"></div>
@@ -40,5 +40,8 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block page_scripts %}
 <script src="/static/js/boms.js"></script>
 {% endblock %}

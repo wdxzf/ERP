@@ -20,7 +20,7 @@ function escAttr(s) {
 
 function fileLink(revisionId, slot, hasFile) {
   if (!hasFile) return "—";
-  const u = `/revisions/${revisionId}/drawing-file?slot=${slot}`;
+  const u = `/api/revisions/${revisionId}/drawing-file?slot=${slot}`;
   return `<a href="${u}" target="_blank" rel="noopener">下载</a>`;
 }
 
@@ -45,7 +45,7 @@ function buildQuery() {
 
 async function loadFlatList() {
   const qs = buildQuery();
-  const res = await fetch(`/revisions/flat${qs ? `?${qs}` : ""}`);
+  const res = await http.fetch(`/revisions/flat${qs ? `?${qs}` : ""}`);
   if (!res.ok) {
     revMsg("加载版本列表失败", true);
     flatRows = [];
@@ -81,7 +81,7 @@ function renderTable(rows) {
       <button type="button" class="btn sm" data-act="edit" data-id="${r.id}">编辑</button>
       <button type="button" class="btn sm primary" data-act="current" data-id="${r.id}">设为当前</button>
       <button type="button" class="btn sm" data-act="upload" data-id="${r.id}">上传图纸</button>
-      <a class="btn sm" href="/export/revisions/${r.material_id}">导出物料版本</a>
+      <a class="btn sm" href="/api/export/revisions/${r.material_id}">导出物料版本</a>
     </td>
   </tr>`
     )
@@ -97,13 +97,11 @@ async function loadCategories() {
   const sel = document.getElementById("rev_f_category");
   if (!sel) return;
   try {
-    const res = await fetch("/material-categories");
-    if (!res.ok) return;
-    const rows = await res.json();
+    const basic = await appStore.initBasicData(["materialCategories"]);
+    const rows = (basic.materialCategories || []).filter((item) => item.is_active);
     const cur = sel.value;
     sel.innerHTML = '<option value="">全部分类</option>';
     for (const c of rows) {
-      if (!c.is_active) continue;
       const o = document.createElement("option");
       o.value = c.name;
       o.textContent = c.name;
@@ -114,12 +112,8 @@ async function loadCategories() {
 }
 
 async function loadNonstandardMaterials() {
-  const res = await fetch("/materials");
-  if (!res.ok) {
-    nonstandardMaterials = [];
-    return;
-  }
-  const all = await res.json();
+  const basic = await appStore.initBasicData(["materials"]);
+  const all = basic.materials || [];
   nonstandardMaterials = all.filter((m) => m.part_type === "custom" || m.part_type === "assembly");
   nonstandardMaterials.sort((a, b) => String(a.code || "").localeCompare(String(b.code || ""), "zh-CN"));
   populateMaterialSelect();
@@ -212,7 +206,7 @@ async function uploadRevisionDrawing(revisionId, slot, file) {
   const fd = new FormData();
   fd.append("slot", slot);
   fd.append("file", file);
-  const res = await fetch(`/revisions/${revisionId}/upload-drawing`, { method: "POST", body: fd });
+  const res = await http.fetch(`/revisions/${revisionId}/upload-drawing`, { method: "POST", body: fd });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     const d = e.detail;
@@ -248,7 +242,7 @@ async function saveRevision() {
     url = `/materials/${mid}/revisions`;
     method = "POST";
   }
-  const res = await fetch(url, {
+  const res = await http.fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -275,7 +269,7 @@ async function saveRevision() {
 }
 
 async function setCurrentRevision(id) {
-  const res = await fetch(`/revisions/${id}/set-current`, { method: "POST" });
+  const res = await http.fetch(`/revisions/${id}/set-current`, { method: "POST" });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     return revMsg(typeof e.detail === "string" ? e.detail : "设为当前失败", true);
