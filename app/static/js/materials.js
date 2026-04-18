@@ -1,7 +1,7 @@
 const msgBox = document.getElementById("msg");
 const tbody = document.querySelector("#materials-table tbody");
 
-const MATERIAL_TYPE_OPTIONS = [
+const DEFAULT_MATERIAL_TYPE_OPTIONS = [
   "电子元器件",
   "电气件",
   "机电件",
@@ -21,7 +21,7 @@ const VIEW_MODE_LABELS = {
 let allMaterials = [];
 let allSuppliers = [];
 let allCategories = [];
-let optionMap = { unit: [], material_attr: [], grade: [] };
+let optionMap = { unit: [], material_type: [], material_attr: [], grade: [] };
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -198,7 +198,10 @@ function renderMaterialTypeOptions() {
   const formSelect = document.getElementById("m_material_type");
   const filterCurrent = filterSelect?.value || "";
   const formCurrent = formSelect?.value || "";
-  const options = MATERIAL_TYPE_OPTIONS.map(
+  const typeOptions = optionMap.material_type.length
+    ? optionMap.material_type.map((item) => normStr(item.name)).filter(Boolean)
+    : DEFAULT_MATERIAL_TYPE_OPTIONS;
+  const options = typeOptions.map(
     (item) => `<option value="${escapeAttr(item)}">${escapeHtml(item)}</option>`
   ).join("");
 
@@ -206,7 +209,7 @@ function renderMaterialTypeOptions() {
   if (formSelect) formSelect.innerHTML = `<option value="">请选择物料类型</option>${options}`;
 
   if (filterSelect) filterSelect.value = filterCurrent;
-  if (formSelect) formSelect.value = formCurrent || "电子元器件";
+  if (formSelect) formSelect.value = formCurrent || typeOptions[0] || "电子元器件";
 }
 
 function renderCategoryOptions() {
@@ -394,7 +397,7 @@ function resetMaterialForm() {
   document.getElementById("m_brand_attr").value = "";
   document.querySelector(".material-form-advanced")?.removeAttribute("open");
   if (!document.getElementById("m_material_type").value) {
-    document.getElementById("m_material_type").value = "电子元器件";
+    document.getElementById("m_material_type").value = optionMap.material_type[0]?.name || "电子元器件";
   }
   if (!document.getElementById("m_category").value && allCategories.length) {
     document.getElementById("m_category").value = allCategories[0].name;
@@ -574,10 +577,12 @@ async function loadBasicData(force = false) {
 
   optionMap = {
     unit: activeOptions.filter((item) => item.option_type === "unit"),
+    material_type: activeOptions.filter((item) => item.option_type === "material_type"),
     material_attr: activeOptions.filter((item) => item.option_type === "material_attr"),
     grade: activeOptions.filter((item) => item.option_type === "grade"),
   };
 
+  renderMaterialTypeOptions();
   renderCategoryOptions();
   renderSelectOptions("m_unit", optionMap.unit, "请选择单位");
   renderBrandAttrSuggestions();
@@ -621,7 +626,6 @@ window.saveMaterial = saveMaterial;
 window.disableMaterial = disableMaterial;
 window.removeMaterial = removeMaterial;
 
-renderMaterialTypeOptions();
 setTableState("加载中...");
 
 (async function initMaterialsPage() {

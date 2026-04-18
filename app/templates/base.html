@@ -30,13 +30,13 @@
             <span class="nav-caret" aria-hidden="true"></span>
           </summary>
           <div class="sidebar-subnav">
+            <a href="/ui/categories" class="{% if request.url.path == '/ui/categories' %}active{% endif %}" title="基础数据管理">
+              <span class="nav-icon"><i data-lucide="tags"></i></span>
+              <span class="nav-label menu-text">基础数据管理</span>
+            </a>
             <a href="/ui/materials" class="{% if request.url.path in ['/ui', '/ui/dashboard', '/ui/materials'] or (request.url.path.startswith('/ui/materials/') and '/revisions' in request.url.path) %}active{% endif %}" title="物料列表">
               <span class="nav-icon"><i data-lucide="list"></i></span>
               <span class="nav-label menu-text">物料列表</span>
-            </a>
-            <a href="/ui/categories" class="{% if request.url.path == '/ui/categories' %}active{% endif %}" title="分类管理">
-              <span class="nav-icon"><i data-lucide="tags"></i></span>
-              <span class="nav-label menu-text">分类管理</span>
             </a>
             <a href="/ui/nonstandard-materials" class="{% if request.url.path == '/ui/nonstandard-materials' %}active{% endif %}" title="板卡 / 模块">
               <span class="nav-icon"><i data-lucide="cpu"></i></span>

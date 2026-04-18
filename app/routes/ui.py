@@ -107,7 +107,7 @@ def suppliers_page(request: Request):
 
 @router.get("/categories")
 def categories_page(request: Request):
-    return _render(request, "categories.html", "分类管理")
+    return _render(request, "categories.html", "基础数据管理")
 
 
 @router.get("/settings/integrations")

@@ -274,6 +274,8 @@ def ensure_default_system_options():
         "material_attr": ["TI", "ADI", "ST", "Infineon", "onsemi", "NXP", "Murata", "Yageo"],
         "grade": ["常规", "精密", "工业级", "车规级", "实验用"],
     }
+    defaults.pop("tax_rate", None)
+    defaults["material_type"] = ["电子元器件", "电气件", "机电件", "结构件", "五金件", "模块", "板卡", "整机", "其他"]
     with engine.begin() as conn:
         for option_type, names in defaults.items():
             for idx, name in enumerate(names, start=1):

@@ -10,7 +10,7 @@ from app.modules.categories.schema import (
     SystemOptionUpdate,
 )
 
-VALID_OPTION_TYPES = {"unit", "tax_rate", "material_attr", "grade", "product_category"}
+VALID_OPTION_TYPES = {"unit", "material_type", "material_attr", "grade", "product_category"}
 
 
 def list_material_categories(db: Session):
@@ -63,9 +63,9 @@ def soft_delete_material_category(db: Session, category_id: int):
 def hard_delete_material_category(db: Session, category_id: int):
     category = repository.get_material_category_or_404(db, category_id)
     if repository.count_materials_by_category_name(db, category.name):
-        raise HTTPException(status_code=400, detail="璇ョ墿鏂欏垎绫诲凡琚墿鏂欎娇鐢紝鏃犳硶鍒犻櫎")
+        raise HTTPException(status_code=400, detail="Category is referenced by materials and cannot be deleted")
     if repository.count_suppliers_using_category_name(db, category.name):
-        raise HTTPException(status_code=400, detail="璇ョ墿鏂欏垎绫诲凡琚緵搴斿晢浣跨敤锛屾棤娉曞垹闄?")
+        raise HTTPException(status_code=400, detail="Category is referenced by suppliers and cannot be deleted")
     db.delete(category)
     db.commit()
     return {"message": "Material category deleted"}
@@ -119,15 +119,15 @@ def soft_delete_system_option(db: Session, option_id: int):
 def hard_delete_system_option(db: Session, option_id: int):
     option = repository.get_system_option_or_404(db, option_id)
     if option.option_type == "unit" and repository.count_materials_by_unit(db, option.name):
-        raise HTTPException(status_code=400, detail="璇ュ崟浣嶅凡琚墿鏂欎娇鐢紝鏃犳硶鍒犻櫎")
-    if option.option_type == "tax_rate" and repository.count_materials_by_tax_rate(db, option.name):
-        raise HTTPException(status_code=400, detail="璇ョ◣鐜囧凡琚墿鏂欎娇鐢紝鏃犳硶鍒犻櫎")
+        raise HTTPException(status_code=400, detail="System option is referenced by materials and cannot be deleted")
+    if option.option_type == "material_type" and repository.count_materials_by_material_type(db, option.name):
+        raise HTTPException(status_code=400, detail="System option is referenced by materials and cannot be deleted")
     if option.option_type == "material_attr" and repository.count_materials_by_material_attr(db, option.name):
-        raise HTTPException(status_code=400, detail="璇ユ潗璐ㄥ凡琚墿鏂欎娇鐢紝鏃犳硶鍒犻櫎")
+        raise HTTPException(status_code=400, detail="System option is referenced by materials and cannot be deleted")
     if option.option_type == "grade" and repository.count_materials_by_grade(db, option.name):
-        raise HTTPException(status_code=400, detail="璇ョ瓑绾у凡琚墿鏂欎娇鐢紝鏃犳硶鍒犻櫎")
+        raise HTTPException(status_code=400, detail="System option is referenced by materials and cannot be deleted")
     if option.option_type == "product_category" and repository.count_products_by_product_category(db, option.name):
-        raise HTTPException(status_code=400, detail="璇ヤ骇鍝佺被鍒凡琚骇鍝佷娇鐢紝鏃犳硶鍒犻櫎")
+        raise HTTPException(status_code=400, detail="System option is referenced by products and cannot be deleted")
     db.delete(option)
     db.commit()
     return {"message": "System option deleted"}

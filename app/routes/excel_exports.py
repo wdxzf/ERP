@@ -181,7 +181,7 @@ def export_categories(
     option_type: str = Query(
         default="category",
         alias="type",
-        pattern="^(category|unit|tax_rate|material_attr|grade|product_category)$",
+        pattern="^(category|unit|material_type|material_attr|grade|product_category)$",
     ),
     db: Session = Depends(get_db),
 ):

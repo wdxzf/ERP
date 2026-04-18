@@ -8,10 +8,10 @@ const isCategoryType = () => typeSelect().value === "category";
 
 const typeMetaMap = {
   category: { label: "元件分类", title: "元件分类列表" },
-  unit: { label: "单位", title: "单位列表" },
-  tax_rate: { label: "税率", title: "税率列表" },
+  material_type: { label: "物料类型", title: "物料类型列表" },
   material_attr: { label: "品牌 / 系列", title: "品牌 / 系列列表" },
   grade: { label: "等级 / 属性", title: "等级 / 属性列表" },
+  unit: { label: "单位", title: "单位列表" },
   product_category: { label: "产品分类", title: "产品分类列表" },
 };
 

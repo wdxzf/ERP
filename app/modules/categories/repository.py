@@ -62,8 +62,10 @@ def count_materials_by_unit(db: Session, unit_name: str):
     return db.scalar(select(func.count(models.Material.id)).where(models.Material.unit == unit_name)) or 0
 
 
-def count_materials_by_tax_rate(db: Session, tax_rate_name: str):
-    return db.scalar(select(func.count(models.Material.id)).where(models.Material.tax_rate == tax_rate_name)) or 0
+def count_materials_by_material_type(db: Session, material_type_name: str):
+    return db.scalar(
+        select(func.count(models.Material.id)).where(models.Material.material_type == material_type_name)
+    ) or 0
 
 
 def count_materials_by_material_attr(db: Session, attr_name: str):
